@@ -72,8 +72,14 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
       key: 'name',
       label: 'Name',
       sortable: true,
-      render: (value) => (
-        <span className="font-medium">{value}</span>
+      render: (value, _product) => (
+        <div className="flex items-center space-x-2">
+          <span className="font-medium">{value}</span>
+          {/* Add preferred supplier indicator - placeholder for now */}
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">
+            📋 Supplier Set
+          </span>
+        </div>
       ),
     },
     {

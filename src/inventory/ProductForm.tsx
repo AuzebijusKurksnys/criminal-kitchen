@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import type { Product } from '../data/types';
+import type { Product, Supplier } from '../data/types';
 import { ProductSchema, type ProductFormData } from '../utils/validators';
 import { UNITS, PRODUCT_CATEGORIES } from '../data/constants';
 import { Select } from '../components/Select';
 import { useToast } from '../components/Toast';
+import { listSuppliers, getPreferredSupplier, setPreferredSupplier } from '../data/store';
 
 interface ProductFormProps {
   product?: Product;
@@ -13,7 +14,7 @@ interface ProductFormProps {
 }
 
 export function ProductForm({ product, onSubmit, onCancel, isSubmitting = false }: ProductFormProps) {
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
   const [formData, setFormData] = useState<ProductFormData>({
     sku: product?.sku || '',
     name: product?.name || '',
@@ -22,9 +23,31 @@ export function ProductForm({ product, onSubmit, onCancel, isSubmitting = false 
     minStock: product?.minStock || 0,
     category: product?.category || '',
     notes: product?.notes || '',
+    preferredSupplierId: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [preferredSupplier, setPreferredSupplierState] = useState<Supplier | undefined>();
+  const [loadingSuppliers, setLoadingSuppliers] = useState(false);
 
+  // Load suppliers on component mount
+  useEffect(() => {
+    const loadSuppliers = async () => {
+      setLoadingSuppliers(true);
+      try {
+        const suppliersData = await listSuppliers();
+        setSuppliers(suppliersData);
+      } catch (error) {
+        showError('Failed to load suppliers');
+      } finally {
+        setLoadingSuppliers(false);
+      }
+    };
+    
+    loadSuppliers();
+  }, [showError]);
+
+  // Load product data and preferred supplier
   useEffect(() => {
     if (product) {
       setFormData({
@@ -35,7 +58,24 @@ export function ProductForm({ product, onSubmit, onCancel, isSubmitting = false 
         minStock: product.minStock || 0,
         category: product.category || '',
         notes: product.notes || '',
+        preferredSupplierId: '',
       });
+      
+      // Load preferred supplier if editing existing product
+      const loadPreferredSupplier = async () => {
+        try {
+          const preferred = await getPreferredSupplier(product.id);
+          setPreferredSupplierState(preferred);
+          setFormData(prev => ({ 
+            ...prev, 
+            preferredSupplierId: preferred?.id || '' 
+          }));
+        } catch (error) {
+          console.error('Failed to load preferred supplier:', error);
+        }
+      };
+      
+      loadPreferredSupplier();
     }
   }, [product]);
 
@@ -55,13 +95,28 @@ export function ProductForm({ product, onSubmit, onCancel, isSubmitting = false 
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
+      // Submit the product form
       onSubmit({
         ...formData,
         unit: formData.unit as any, // Type cast for form submission
       });
+      
+      // Handle preferred supplier setting after product is created/updated
+      if (product && formData.preferredSupplierId && formData.preferredSupplierId !== preferredSupplier?.id) {
+        try {
+          const success = await setPreferredSupplier(product.id, formData.preferredSupplierId);
+          if (success) {
+            showSuccess('Preferred supplier updated');
+          } else {
+            showError('Failed to update preferred supplier');
+          }
+        } catch (error) {
+          showError('Failed to update preferred supplier');
+        }
+      }
     }
   };
 
@@ -74,6 +129,10 @@ export function ProductForm({ product, onSubmit, onCancel, isSubmitting = false 
 
   const unitOptions = UNITS.map(unit => ({ value: unit, label: unit }));
   const categoryOptions = PRODUCT_CATEGORIES.map(cat => ({ value: cat, label: cat }));
+  const supplierOptions = suppliers.map(supplier => ({ 
+    value: supplier.id, 
+    label: supplier.name 
+  }));
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -181,6 +240,38 @@ export function ProductForm({ product, onSubmit, onCancel, isSubmitting = false 
         />
         {errors.notes && <p className="form-error">{errors.notes}</p>}
       </div>
+
+      {/* Preferred Supplier Section - only show when editing existing product */}
+      {product && (
+        <div className="border-t pt-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Supplier Information</h3>
+          
+          {preferredSupplier && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
+              <p className="text-sm text-green-800">
+                <span className="font-medium">Current Preferred Supplier:</span> {preferredSupplier.name}
+              </p>
+            </div>
+          )}
+          
+          <div>
+            <label htmlFor="preferredSupplierId" className="form-label">
+              Preferred Supplier
+            </label>
+            <Select
+              value={formData.preferredSupplierId || ''}
+              onChange={(value) => handleChange('preferredSupplierId', value)}
+              options={supplierOptions}
+              placeholder={loadingSuppliers ? "Loading suppliers..." : "Select preferred supplier"}
+              disabled={loadingSuppliers}
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              Set which supplier is preferred for this product. This affects pricing calculations and ordering.
+            </p>
+            {errors.preferredSupplierId && <p className="form-error">{errors.preferredSupplierId}</p>}
+          </div>
+        </div>
+      )}
 
       <div className="flex justify-end space-x-3">
         <button

@@ -10,6 +10,7 @@ export const ProductSchema = z.object({
   minStock: z.number().min(0, 'Min stock must be >= 0').optional(),
   category: z.string().optional(),
   notes: z.string().optional(),
+  preferredSupplierId: z.string().optional(),
 });
 
 export const SupplierSchema = z.object({

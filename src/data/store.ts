@@ -272,6 +272,57 @@ export async function deleteSupplier(id: string): Promise<boolean> {
   }
 }
 
+// Helper function to get preferred supplier for a product
+export async function getPreferredSupplier(productId: string): Promise<Supplier | undefined> {
+  try {
+    const { data, error } = await supabase
+      .from('supplier_prices')
+      .select(`
+        *,
+        suppliers (*)
+      `)
+      .eq('product_id', productId)
+      .eq('preferred', true)
+      .single();
+    
+    if (error || !data || !data.suppliers) return undefined;
+    
+    return {
+      id: data.suppliers.id,
+      name: data.suppliers.name,
+      email: data.suppliers.email || undefined,
+      phone: data.suppliers.phone || undefined,
+    };
+  } catch (error) {
+    console.error('Error getting preferred supplier:', error);
+    return undefined;
+  }
+}
+
+// Function to set preferred supplier for a product
+export async function setPreferredSupplier(productId: string, supplierId: string): Promise<boolean> {
+  try {
+    // First, unset all preferred suppliers for this product
+    await supabase
+      .from('supplier_prices')
+      .update({ preferred: false })
+      .eq('product_id', productId);
+    
+    // Then set the new preferred supplier
+    const { error } = await supabase
+      .from('supplier_prices')
+      .update({ preferred: true })
+      .eq('product_id', productId)
+      .eq('supplier_id', supplierId);
+    
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error setting preferred supplier:', error);
+    return false;
+  }
+}
+
 // Supplier Price operations
 export async function listSupplierPrices(productId?: string): Promise<SupplierPrice[]> {
   try {
