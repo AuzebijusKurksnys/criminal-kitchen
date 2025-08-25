@@ -55,19 +55,13 @@ const mockProducts: Omit<Product, 'id'>[] = [
 
 const mockSuppliers: Omit<Supplier, 'id'>[] = [
   {
-    name: 'Baltic Foods UAB',
-    email: 'sales@bfoods.lt',
-    phone: '+370 5 123 4567'
+    name: 'Foodlevel, UAB'
   },
   {
-    name: 'FreshPro LT',
-    email: 'hello@freshpro.lt', 
-    phone: '+370 6 987 6543'
+    name: 'Sanitex, UAB'
   },
   {
-    name: 'Brewmaster Supplies',
-    email: 'orders@brewmaster.eu',
-    phone: '+370 5 555 0123'
+    name: 'LIDL, UAB'
   }
 ];
 
@@ -94,15 +88,15 @@ export async function seedData(): Promise<void> {
     const hopsProduct = createdProducts.find(p => p.sku === 'HOPS-003');
     const saltProduct = createdProducts.find(p => p.sku === 'SALT-005');
     
-    const balticFoods = createdSuppliers.find(s => s.name === 'Baltic Foods UAB');
-    const freshPro = createdSuppliers.find(s => s.name === 'FreshPro LT');
-    const brewmaster = createdSuppliers.find(s => s.name === 'Brewmaster Supplies');
+    const foodlevel = createdSuppliers.find(s => s.name === 'Foodlevel, UAB');
+    const sanitex = createdSuppliers.find(s => s.name === 'Sanitex, UAB');
+    const lidl = createdSuppliers.find(s => s.name === 'LIDL, UAB');
 
-    if (chickenProduct && balticFoods && freshPro) {
+    if (chickenProduct && foodlevel && lidl) {
       // Chicken prices from two suppliers
       await createSupplierPrice({
         productId: chickenProduct.id,
-        supplierId: balticFoods.id,
+        supplierId: foodlevel.id,
         price: 8.50,
         currency: 'EUR',
         preferred: true
@@ -110,46 +104,46 @@ export async function seedData(): Promise<void> {
       
       await createSupplierPrice({
         productId: chickenProduct.id,
-        supplierId: freshPro.id,
+        supplierId: lidl.id,
         price: 9.20,
         currency: 'EUR'
       });
     }
 
-    if (beefProduct && freshPro) {
+    if (beefProduct && foodlevel) {
       await createSupplierPrice({
         productId: beefProduct.id,
-        supplierId: freshPro.id,
+        supplierId: foodlevel.id,
         price: 28.50,
         currency: 'EUR',
         preferred: true
       });
     }
 
-    if (flourProduct && balticFoods) {
+    if (flourProduct && lidl) {
       await createSupplierPrice({
         productId: flourProduct.id,
-        supplierId: balticFoods.id,
+        supplierId: lidl.id,
         price: 0.85,
         currency: 'EUR',
         preferred: true
       });
     }
 
-    if (hopsProduct && brewmaster) {
+    if (hopsProduct && foodlevel) {
       await createSupplierPrice({
         productId: hopsProduct.id,
-        supplierId: brewmaster.id,
+        supplierId: foodlevel.id,
         price: 0.045, // 45€ per kg = 0.045€ per gram
         currency: 'EUR',
         preferred: true
       });
     }
 
-    if (saltProduct && balticFoods && freshPro) {
+    if (saltProduct && sanitex && lidl) {
       await createSupplierPrice({
         productId: saltProduct.id,
-        supplierId: balticFoods.id,
+        supplierId: sanitex.id,
         price: 1.20,
         currency: 'EUR',
         preferred: true
@@ -157,7 +151,7 @@ export async function seedData(): Promise<void> {
       
       await createSupplierPrice({
         productId: saltProduct.id,
-        supplierId: freshPro.id,
+        supplierId: lidl.id,
         price: 1.35,
         currency: 'EUR'
       });
