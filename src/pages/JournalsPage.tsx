@@ -29,19 +29,19 @@ export function JournalsPage() {
     loadEntries();
   }, [selectedType]);
 
-  const loadEntries = () => {
+  const loadEntries = async () => {
     setLoading(true);
     try {
       let data: any[] = [];
       switch (selectedType) {
         case 'temperature':
-          data = listTemperatureChecks();
+          data = await listTemperatureChecks();
           break;
         case 'cleaning':
-          data = listCleaningLogs();
+          data = await listCleaningLogs();
           break;
         case 'equipment':
-          data = listEquipmentChecks();
+          data = await listEquipmentChecks();
           break;
       }
       setEntries(data);

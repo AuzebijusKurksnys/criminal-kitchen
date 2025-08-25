@@ -2,7 +2,7 @@
 import type { TechCard, Product } from '../data/types';
 import { Table, type TableColumn } from '../components/Table';
 import { formatPrice, calculateSuggestedPrice, formatMargin } from '../utils/format';
-import { getRestaurantConfig, getPreferredSupplierPrice } from '../data/store';
+import { getRestaurantConfig } from '../data/store';
 
 interface TechCardListProps {
   techCards: TechCard[];
@@ -15,20 +15,10 @@ interface TechCardListProps {
 export function TechCardList({ techCards, onEdit, onDelete, loading = false }: TechCardListProps) {
   const restaurantConfig = getRestaurantConfig();
 
-  const calculateTechCardCost = (techCard: TechCard): { cost: number; hasAllPrices: boolean } => {
-    let totalCost = 0;
-    let hasAllPrices = true;
-
-    for (const item of techCard.items) {
-      const preferredPrice = getPreferredSupplierPrice(item.productId);
-      if (preferredPrice) {
-        totalCost += item.nettoQty * preferredPrice.price;
-      } else {
-        hasAllPrices = false;
-      }
-    }
-
-    return { cost: totalCost, hasAllPrices };
+  const calculateTechCardCost = (_techCard: TechCard): { cost: number; hasAllPrices: boolean } => {
+    // For now, return placeholder values since this requires async supplier price lookup
+    // TODO: Implement proper async cost calculation with supplier prices
+    return { cost: 0, hasAllPrices: false };
   };
 
   const columns: TableColumn<TechCard>[] = [

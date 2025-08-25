@@ -50,11 +50,11 @@ export function SupplierPricesPage() {
     }
   }, [selectedProductId]);
 
-  const loadData = () => {
+  const loadData = async () => {
     setLoading(true);
     try {
-      const productsList = listProducts();
-      const suppliersList = listSuppliers();
+      const productsList = await listProducts();
+      const suppliersList = await listSuppliers();
       
       setProducts(productsList);
       setSuppliers(suppliersList);
@@ -71,9 +71,9 @@ export function SupplierPricesPage() {
     }
   };
 
-  const loadSupplierPrices = (productId: string) => {
+  const loadSupplierPrices = async (productId: string) => {
     try {
-      const prices = listSupplierPrices(productId);
+      const prices = await listSupplierPrices(productId);
       setSupplierPrices(prices);
     } catch (error) {
       showError('Failed to load supplier prices');
@@ -85,7 +85,7 @@ export function SupplierPricesPage() {
   const handleCreateSupplier = async (formData: SupplierFormData) => {
     setSubmitting(true);
     try {
-      const newSupplier = createSupplier(formData);
+      const newSupplier = await createSupplier(formData);
       setSuppliers(prev => [...prev, newSupplier]);
       setViewMode('suppliers');
       showSuccess('Supplier created successfully');
@@ -102,7 +102,7 @@ export function SupplierPricesPage() {
     
     setSubmitting(true);
     try {
-      const updatedSupplier = updateSupplier({
+      const updatedSupplier = await updateSupplier({
         ...editingSupplier,
         ...formData,
       });
@@ -122,7 +122,7 @@ export function SupplierPricesPage() {
 
   const handleDeleteSupplier = async (id: string) => {
     try {
-      const success = deleteSupplier(id);
+      const success = await deleteSupplier(id);
       if (success) {
         setSuppliers(prev => prev.filter(s => s.id !== id));
         // Refresh supplier prices in case some were deleted
@@ -143,7 +143,7 @@ export function SupplierPricesPage() {
   const handleCreateSupplierPrice = async (formData: SupplierPriceFormData) => {
     setSubmitting(true);
     try {
-      const newPrice = createSupplierPrice(formData as any);
+      const newPrice = await createSupplierPrice(formData as any);
       setSupplierPrices(prev => [...prev, newPrice]);
       setViewMode('pricing');
       showSuccess('Supplier price added successfully');
@@ -160,7 +160,7 @@ export function SupplierPricesPage() {
     
     setSubmitting(true);
     try {
-      const updatedPrice = updateSupplierPrice({
+      const updatedPrice = await updateSupplierPrice({
         ...editingPrice,
         ...formData,
       } as any);
@@ -180,7 +180,7 @@ export function SupplierPricesPage() {
 
   const handleDeleteSupplierPrice = async (id: string) => {
     try {
-      const success = deleteSupplierPrice(id);
+      const success = await deleteSupplierPrice(id);
       if (success) {
         setSupplierPrices(prev => prev.filter(p => p.id !== id));
         showSuccess('Supplier price deleted successfully');

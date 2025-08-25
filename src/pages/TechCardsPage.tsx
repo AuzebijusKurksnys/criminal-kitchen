@@ -28,11 +28,11 @@ export function TechCardsPage() {
     loadData();
   }, []);
 
-  const loadData = () => {
+  const loadData = async () => {
     setLoading(true);
     try {
-      const productsList = listProducts();
-      const techCardsList = listTechCards();
+      const productsList = await listProducts();
+      const techCardsList = await listTechCards();
       setProducts(productsList);
       setTechCards(techCardsList);
     } catch (error) {
@@ -46,7 +46,7 @@ export function TechCardsPage() {
   const handleCreateTechCard = async (formData: TechCardFormData) => {
     setSubmitting(true);
     try {
-      const newTechCard = createTechCard(formData as any);
+      const newTechCard = await createTechCard(formData as any);
       setTechCards(prev => [...prev, newTechCard]);
       setViewMode('list');
       showSuccess('Tech card created successfully');
@@ -63,7 +63,7 @@ export function TechCardsPage() {
     
     setSubmitting(true);
     try {
-      const updatedTechCard = updateTechCard({
+      const updatedTechCard = await updateTechCard({
         ...editingTechCard,
         ...formData,
       } as any);
@@ -83,7 +83,7 @@ export function TechCardsPage() {
 
   const handleDeleteTechCard = async (id: string) => {
     try {
-      const success = deleteTechCard(id);
+      const success = await deleteTechCard(id);
       if (success) {
         setTechCards(prev => prev.filter(tc => tc.id !== id));
         showSuccess('Tech card deleted successfully');
