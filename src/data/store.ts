@@ -10,7 +10,7 @@ import type {
 } from './types';
 import { DEFAULT_CURRENCY, DEFAULT_MARKUP_MULTIPLIER } from './constants';
 import { supabase, handleSupabaseError } from '../lib/supabase';
-import type { Tables, TablesInsert, TablesUpdate } from '../lib/database.types';
+import type { TablesInsert, TablesUpdate } from '../lib/database.types';
 
 // Product operations
 export async function listProducts(): Promise<Product[]> {
@@ -22,7 +22,7 @@ export async function listProducts(): Promise<Product[]> {
     
     if (error) throw error;
     
-    return (data || []).map(row => ({
+    return (data || []).map((row: any) => ({
       id: row.id,
       sku: row.sku,
       name: row.name,
@@ -164,7 +164,7 @@ export async function listSuppliers(): Promise<Supplier[]> {
     
     if (error) throw error;
     
-    return (data || []).map(row => ({
+    return (data || []).map((row: any) => ({
       id: row.id,
       name: row.name,
       email: row.email || undefined,
@@ -288,7 +288,7 @@ export async function listSupplierPrices(productId?: string): Promise<SupplierPr
     
     if (error) throw error;
     
-    return (data || []).map(row => ({
+    return (data || []).map((row: any) => ({
       id: row.id,
       productId: row.product_id,
       supplierId: row.supplier_id,
@@ -444,7 +444,7 @@ export async function updateTechCard(techCard: TechCard): Promise<TechCard> {
   return Promise.resolve(techCard);
 }
 
-export async function deleteTechCard(id: string): Promise<boolean> {
+export async function deleteTechCard(_id: string): Promise<boolean> {
   return Promise.resolve(true);
 }
 
@@ -458,7 +458,7 @@ export async function listTemperatureChecks(): Promise<TemperatureCheck[]> {
     
     if (error) throw error;
     
-    return (data || []).map(row => ({
+    return (data || []).map((row: any) => ({
       id: row.id,
       location: row.location,
       valueC: Number(row.value_c),
@@ -512,7 +512,7 @@ export async function listCleaningLogs(): Promise<CleaningLog[]> {
     
     if (error) throw error;
     
-    return (data || []).map(row => ({
+    return (data || []).map((row: any) => ({
       id: row.id,
       area: row.area,
       status: row.status as CleaningLog['status'],
@@ -566,7 +566,7 @@ export async function listEquipmentChecks(): Promise<EquipmentCheck[]> {
     
     if (error) throw error;
     
-    return (data || []).map(row => ({
+    return (data || []).map((row: any) => ({
       id: row.id,
       equipment: row.equipment,
       status: row.status as EquipmentCheck['status'],
