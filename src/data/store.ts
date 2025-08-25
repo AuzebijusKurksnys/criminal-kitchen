@@ -676,16 +676,18 @@ export function updateRestaurantConfig(config: RestaurantConfig): RestaurantConf
   return config;
 }
 
-// Initialize with seed data if needed
-export async function seed(): Promise<void> {
+// Optional: Add Lithuanian suppliers manually (not auto-run)
+export async function seedSuppliersOnly(): Promise<void> {
   try {
-    const products = await listProducts();
-    if (products.length === 0) {
-      // Import and apply mock data
+    const suppliers = await listSuppliers();
+    if (suppliers.length === 0) {
       const { seedData } = await import('./mockData');
       await seedData();
+      console.log('✅ Lithuanian suppliers added to database');
+    } else {
+      console.log('ℹ️ Suppliers already exist, skipping seed');
     }
   } catch (error) {
-    console.error('Error seeding data:', error);
+    console.error('Error seeding suppliers:', error);
   }
 }

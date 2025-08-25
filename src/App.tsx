@@ -1,15 +1,10 @@
-import { useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AppRoutes } from './AppRoutes';
 import { ToastProvider } from './components/Toast';
 import { NavBar } from './components/NavBar';
-import { seed } from './data/store';
 
 function App() {
-  useEffect(() => {
-    // Initialize data with seed if needed
-    seed();
-  }, []);
+  // No auto-seeding - database starts clean
 
   return (
     <ToastProvider>
