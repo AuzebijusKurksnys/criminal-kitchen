@@ -26,10 +26,10 @@ export function InventoryPage() {
     loadProducts();
   }, []);
 
-  const loadProducts = () => {
+  const loadProducts = async () => {
     setLoading(true);
     try {
-      const productsList = listProducts();
+      const productsList = await listProducts();
       setProducts(productsList);
     } catch (error) {
       showError('Failed to load products');
@@ -42,7 +42,7 @@ export function InventoryPage() {
   const handleCreateProduct = async (formData: ProductFormData) => {
     setSubmitting(true);
     try {
-      const newProduct = createProduct(formData as any);
+      const newProduct = await createProduct(formData as any);
       setProducts(prev => [...prev, newProduct]);
       setViewMode('list');
       showSuccess('Product created successfully');
@@ -59,7 +59,7 @@ export function InventoryPage() {
     
     setSubmitting(true);
     try {
-      const updatedProduct = updateProduct({
+      const updatedProduct = await updateProduct({
         ...editingProduct,
         ...formData,
       } as any);
@@ -79,7 +79,7 @@ export function InventoryPage() {
 
   const handleDeleteProduct = async (id: string) => {
     try {
-      const success = deleteProduct(id);
+      const success = await deleteProduct(id);
       if (success) {
         setProducts(prev => prev.filter(p => p.id !== id));
         showSuccess('Product deleted successfully');

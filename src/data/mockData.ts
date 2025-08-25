@@ -71,18 +71,20 @@ const mockSuppliers: Omit<Supplier, 'id'>[] = [
   }
 ];
 
-export function seedData(): void {
+export async function seedData(): Promise<void> {
   // Create products
   const createdProducts: Product[] = [];
-  mockProducts.forEach(productData => {
-    createdProducts.push(createProduct(productData));
-  });
+  for (const productData of mockProducts) {
+    const product = await createProduct(productData);
+    createdProducts.push(product);
+  }
 
   // Create suppliers  
   const createdSuppliers: Supplier[] = [];
-  mockSuppliers.forEach(supplierData => {
-    createdSuppliers.push(createSupplier(supplierData));
-  });
+  for (const supplierData of mockSuppliers) {
+    const supplier = await createSupplier(supplierData);
+    createdSuppliers.push(supplier);
+  }
 
   // Create supplier prices
   if (createdProducts.length > 0 && createdSuppliers.length > 0) {
@@ -98,7 +100,7 @@ export function seedData(): void {
 
     if (chickenProduct && balticFoods && freshPro) {
       // Chicken prices from two suppliers
-      createSupplierPrice({
+      await createSupplierPrice({
         productId: chickenProduct.id,
         supplierId: balticFoods.id,
         price: 8.50,
@@ -106,7 +108,7 @@ export function seedData(): void {
         preferred: true
       });
       
-      createSupplierPrice({
+      await createSupplierPrice({
         productId: chickenProduct.id,
         supplierId: freshPro.id,
         price: 9.20,
@@ -115,7 +117,7 @@ export function seedData(): void {
     }
 
     if (beefProduct && freshPro) {
-      createSupplierPrice({
+      await createSupplierPrice({
         productId: beefProduct.id,
         supplierId: freshPro.id,
         price: 28.50,
@@ -125,7 +127,7 @@ export function seedData(): void {
     }
 
     if (flourProduct && balticFoods) {
-      createSupplierPrice({
+      await createSupplierPrice({
         productId: flourProduct.id,
         supplierId: balticFoods.id,
         price: 0.85,
@@ -135,7 +137,7 @@ export function seedData(): void {
     }
 
     if (hopsProduct && brewmaster) {
-      createSupplierPrice({
+      await createSupplierPrice({
         productId: hopsProduct.id,
         supplierId: brewmaster.id,
         price: 0.045, // 45€ per kg = 0.045€ per gram
@@ -145,7 +147,7 @@ export function seedData(): void {
     }
 
     if (saltProduct && balticFoods && freshPro) {
-      createSupplierPrice({
+      await createSupplierPrice({
         productId: saltProduct.id,
         supplierId: balticFoods.id,
         price: 1.20,
@@ -153,7 +155,7 @@ export function seedData(): void {
         preferred: true
       });
       
-      createSupplierPrice({
+      await createSupplierPrice({
         productId: saltProduct.id,
         supplierId: freshPro.id,
         price: 1.35,
