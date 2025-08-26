@@ -788,7 +788,29 @@ export async function getInvoice(id: string): Promise<Invoice | null> {
   };
 }
 
+export async function checkInvoiceExists(supplierId: string, invoiceNumber: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('invoices')
+    .select('id')
+    .eq('supplier_id', supplierId)
+    .eq('invoice_number', invoiceNumber)
+    .limit(1);
+  
+  if (error) {
+    console.error('Error checking invoice existence:', error);
+    return false;
+  }
+  
+  return data && data.length > 0;
+}
+
 export async function createInvoice(invoice: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>): Promise<Invoice> {
+  // Check if invoice already exists for this supplier
+  const exists = await checkInvoiceExists(invoice.supplierId, invoice.invoiceNumber);
+  if (exists) {
+    throw new Error(`Invoice ${invoice.invoiceNumber} already exists for this supplier`);
+  }
+
   const { data, error } = await supabase
     .from('invoices')
     .insert({
@@ -813,7 +835,16 @@ export async function createInvoice(invoice: Omit<Invoice, 'id' | 'createdAt' | 
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('Supabase error creating invoice:', error);
+    
+    // Handle unique constraint violation
+    if (error.code === '23505' && error.message.includes('invoices_supplier_invoice_number_unique')) {
+      throw new Error(`Invoice ${invoice.invoiceNumber} already exists for this supplier`);
+    }
+    
+    throw new Error(`Failed to create invoice: ${error.message}`);
+  }
   
   return {
     id: data.id,

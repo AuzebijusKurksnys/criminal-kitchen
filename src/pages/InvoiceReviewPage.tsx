@@ -12,7 +12,8 @@ import {
   createProduct,
   updateProduct,
   createSupplierPrice,
-  listProducts
+  listProducts,
+  checkInvoiceExists
 } from '../data/store';
 import { findProductMatches } from '../services/invoiceParser';
 import type { 
@@ -147,6 +148,19 @@ export function InvoiceReviewPage() {
     setIsProcessing(true);
 
     try {
+      // Check if invoice already exists for this supplier
+      console.log('Checking for existing invoice...', { 
+        supplierId: selectedSupplierId, 
+        invoiceNumber: extractedData.invoice.invoiceNumber 
+      });
+      
+      const existingInvoice = await checkInvoiceExists(selectedSupplierId, extractedData.invoice.invoiceNumber);
+      if (existingInvoice) {
+        showToast('error', `Invoice ${extractedData.invoice.invoiceNumber} already exists for this supplier`);
+        setIsProcessing(false);
+        return;
+      }
+
       // First create the invoice record
       console.log('Creating invoice...', { extractedData: extractedData.invoice, selectedSupplierId });
       const invoiceId = generateId();
