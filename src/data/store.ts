@@ -698,6 +698,7 @@ export async function seedSuppliersOnly(): Promise<void> {
 
 // Invoice Management Functions
 export async function listInvoices(): Promise<Invoice[]> {
+  console.log('Fetching invoices from Supabase...');
   const { data, error } = await supabase
     .from('invoices')
     .select(`
@@ -706,8 +707,14 @@ export async function listInvoices(): Promise<Invoice[]> {
     `)
     .order('created_at', { ascending: false });
   
-  if (error) throw error;
-  return data?.map((row: any) => ({
+  console.log('Supabase response:', { data, error });
+  
+  if (error) {
+    console.error('Supabase error:', error);
+    throw error;
+  }
+  
+  const invoices = data?.map((row: any) => ({
     id: row.id,
     supplierId: row.supplier_id,
     invoiceNumber: row.invoice_number,
@@ -722,7 +729,7 @@ export async function listInvoices(): Promise<Invoice[]> {
     fileName: row.file_name ?? undefined,
     fileSize: row.file_size ?? undefined,
     mimeType: row.mime_type ?? undefined,
-    extractedData: row.extracted_data,
+    extractedData: row.extracted_data || undefined,
     notes: row.notes ?? undefined,
     processedAt: row.processed_at ?? undefined,
     processedBy: row.processed_by ?? undefined,
@@ -730,6 +737,9 @@ export async function listInvoices(): Promise<Invoice[]> {
     updatedAt: row.updated_at ?? new Date().toISOString(),
     supplierName: row.suppliers?.name
   })) || [];
+  
+  console.log('Mapped invoices:', invoices);
+  return invoices;
 }
 
 export async function getInvoice(id: string): Promise<Invoice | null> {
@@ -760,7 +770,7 @@ export async function getInvoice(id: string): Promise<Invoice | null> {
     fileName: data.file_name ?? undefined,
     fileSize: data.file_size ?? undefined,
     mimeType: data.mime_type ?? undefined,
-    extractedData: data.extracted_data,
+    extractedData: data.extracted_data || undefined,
     notes: data.notes ?? undefined,
     processedAt: data.processed_at ?? undefined,
     processedBy: data.processed_by ?? undefined,
@@ -812,7 +822,7 @@ export async function createInvoice(invoice: Omit<Invoice, 'id' | 'createdAt' | 
     fileName: data.file_name ?? undefined,
     fileSize: data.file_size ?? undefined,
     mimeType: data.mime_type ?? undefined,
-    extractedData: data.extracted_data,
+    extractedData: data.extracted_data || undefined,
     notes: data.notes ?? undefined,
     processedAt: data.processed_at ?? undefined,
     processedBy: data.processed_by ?? undefined,
@@ -866,7 +876,7 @@ export async function updateInvoice(id: string, updates: Partial<Invoice>): Prom
     fileName: data.file_name ?? undefined,
     fileSize: data.file_size ?? undefined,
     mimeType: data.mime_type ?? undefined,
-    extractedData: data.extracted_data,
+    extractedData: data.extracted_data || undefined,
     notes: data.notes ?? undefined,
     processedAt: data.processed_at ?? undefined,
     processedBy: data.processed_by ?? undefined,

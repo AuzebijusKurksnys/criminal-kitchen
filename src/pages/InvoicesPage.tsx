@@ -38,11 +38,13 @@ export function InvoicesPage() {
   const loadInvoices = async () => {
     try {
       setIsLoading(true);
+      console.log('Loading invoices...');
       const data = await listInvoices();
+      console.log('Loaded invoices:', data);
       setInvoices(data);
     } catch (error) {
       console.error('Error loading invoices:', error);
-      showToast('error', 'Failed to load invoices');
+      showToast('error', `Failed to load invoices: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -117,40 +119,40 @@ export function InvoicesPage() {
     {
       key: 'invoiceNumber',
       label: 'Invoice #',
-      render: (invoice: Invoice & { supplierName?: string }) => (
+      render: (_value: any, invoice: Invoice & { supplierName?: string }) => (
         <div>
-          <div className="font-medium text-gray-900">{invoice.invoiceNumber}</div>
-          <div className="text-sm text-gray-500">{invoice.supplierName}</div>
+          <div className="font-medium text-gray-900">{invoice?.invoiceNumber}</div>
+          <div className="text-sm text-gray-500">{invoice?.supplierName}</div>
         </div>
       )
     },
     {
       key: 'invoiceDate',
       label: 'Date',
-      render: (invoice: Invoice) => invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString() : '-'
+      render: (_value: any, invoice: Invoice) => invoice?.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString() : '-'
     },
     {
       key: 'totalInclVat',
       label: 'Total (incl. VAT)',
-      render: (invoice: Invoice) => formatPrice(invoice.totalInclVat || 0, invoice.currency || 'EUR')
+      render: (_value: any, invoice: Invoice) => formatPrice(invoice?.totalInclVat || 0, invoice?.currency || 'EUR')
     },
     {
       key: 'totalExclVat',
       label: 'Total (excl. VAT)',
-      render: (invoice: Invoice) => formatPrice(invoice.totalExclVat || 0, invoice.currency || 'EUR')
+      render: (_value: any, invoice: Invoice) => formatPrice(invoice?.totalExclVat || 0, invoice?.currency || 'EUR')
     },
     {
       key: 'discountAmount',
       label: 'Discount',
-      render: (invoice: Invoice) => 
-        (invoice.discountAmount || 0) > 0 ? formatPrice(invoice.discountAmount || 0, invoice.currency || 'EUR') : '-'
+      render: (_value: any, invoice: Invoice) => 
+        (invoice?.discountAmount || 0) > 0 ? formatPrice(invoice?.discountAmount || 0, invoice?.currency || 'EUR') : '-'
     },
     {
       key: 'status',
       label: 'Status',
-      render: (invoice: Invoice) => (
+      render: (_value: any, invoice: Invoice) => (
         <Select
-          value={invoice.status}
+          value={invoice?.status}
           onChange={(value) => handleStatusChange(invoice.id, value as InvoiceStatus)}
           options={[
             { value: 'pending', label: 'Pending' },
@@ -166,9 +168,9 @@ export function InvoicesPage() {
     {
       key: 'actions',
       label: 'Actions',
-      render: (invoice: Invoice) => (
+      render: (_value: any, invoice: Invoice) => (
         <div className="flex space-x-2">
-          {invoice.filePath && (
+          {invoice?.filePath && (
             <button
               onClick={() => handleViewFile(invoice)}
               className="text-blue-600 hover:text-blue-900 text-sm"
