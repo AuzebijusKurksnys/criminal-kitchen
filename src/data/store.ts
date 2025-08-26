@@ -9,6 +9,8 @@ import type {
   RestaurantConfig,
   Invoice,
   InvoiceLineItem,
+  Currency,
+  InvoiceStatus,
 } from './types';
 import { DEFAULT_CURRENCY, DEFAULT_MARKUP_MULTIPLIER } from './constants';
 import { supabase, handleSupabaseError } from '../lib/supabase';
@@ -697,7 +699,7 @@ export async function seedSuppliersOnly(): Promise<void> {
 // Invoice Management Functions
 export async function listInvoices(): Promise<Invoice[]> {
   const { data, error } = await supabase
-    .from('invoices' as any)
+    .from('invoices')
     .select(`
       *,
       suppliers(name)
@@ -713,26 +715,26 @@ export async function listInvoices(): Promise<Invoice[]> {
     totalExclVat: row.total_excl_vat,
     totalInclVat: row.total_incl_vat,
     vatAmount: row.vat_amount,
-    discountAmount: row.discount_amount,
-    currency: row.currency,
-    status: row.status,
-    filePath: row.file_path,
-    fileName: row.file_name,
-    fileSize: row.file_size,
-    mimeType: row.mime_type,
+    discountAmount: row.discount_amount || 0,
+    currency: row.currency as Currency,
+    status: row.status as InvoiceStatus,
+    filePath: row.file_path || undefined,
+    fileName: row.file_name || undefined,
+    fileSize: row.file_size || undefined,
+    mimeType: row.mime_type || undefined,
     extractedData: row.extracted_data,
-    notes: row.notes,
-    processedAt: row.processed_at,
-    processedBy: row.processed_by,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    notes: row.notes || undefined,
+    processedAt: row.processed_at || undefined,
+    processedBy: row.processed_by || undefined,
+    createdAt: row.created_at || new Date().toISOString(),
+    updatedAt: row.updated_at || new Date().toISOString(),
     supplierName: row.suppliers?.name
-  } as any)) || [];
+  })) || [];
 }
 
 export async function getInvoice(id: string): Promise<Invoice | null> {
   const { data, error } = await supabase
-    .from('invoices' as any)
+    .from('invoices')
     .select(`
       *,
       suppliers(name)
@@ -751,26 +753,26 @@ export async function getInvoice(id: string): Promise<Invoice | null> {
     totalExclVat: data.total_excl_vat,
     totalInclVat: data.total_incl_vat,
     vatAmount: data.vat_amount,
-    discountAmount: data.discount_amount,
-    currency: data.currency,
-    status: data.status,
-    filePath: data.file_path,
-    fileName: data.file_name,
-    fileSize: data.file_size,
-    mimeType: data.mime_type,
+    discountAmount: data.discount_amount || 0,
+    currency: data.currency as Currency,
+    status: data.status as InvoiceStatus,
+    filePath: data.file_path || undefined,
+    fileName: data.file_name || undefined,
+    fileSize: data.file_size || undefined,
+    mimeType: data.mime_type || undefined,
     extractedData: data.extracted_data,
-    notes: data.notes,
-    processedAt: data.processed_at,
-    processedBy: data.processed_by,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at,
+    notes: data.notes || undefined,
+    processedAt: data.processed_at || undefined,
+    processedBy: data.processed_by || undefined,
+    createdAt: data.created_at || new Date().toISOString(),
+    updatedAt: data.updated_at || new Date().toISOString(),
     supplierName: data.suppliers?.name
-  } as any;
+  };
 }
 
 export async function createInvoice(invoice: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>): Promise<Invoice> {
   const { data, error } = await supabase
-    .from('invoices' as any)
+    .from('invoices')
     .insert({
       supplier_id: invoice.supplierId,
       invoice_number: invoice.invoiceNumber,
@@ -841,7 +843,7 @@ export async function updateInvoice(id: string, updates: Partial<Invoice>): Prom
   if (updates.processedBy !== undefined) updateData.processed_by = updates.processedBy;
 
   const { data, error } = await supabase
-    .from('invoices' as any)
+    .from('invoices')
     .update(updateData)
     .eq('id', id)
     .select()
@@ -875,7 +877,7 @@ export async function updateInvoice(id: string, updates: Partial<Invoice>): Prom
 
 export async function deleteInvoice(id: string): Promise<void> {
   const { error } = await supabase
-    .from('invoices' as any)
+    .from('invoices')
     .delete()
     .eq('id', id);
   
@@ -885,7 +887,7 @@ export async function deleteInvoice(id: string): Promise<void> {
 // Invoice Line Items Functions
 export async function listInvoiceLineItems(invoiceId: string): Promise<InvoiceLineItem[]> {
   const { data, error } = await supabase
-    .from('invoice_line_items' as any)
+    .from('invoice_line_items')
     .select('*')
     .eq('invoice_id', invoiceId)
     .order('created_at', { ascending: true });
@@ -894,26 +896,26 @@ export async function listInvoiceLineItems(invoiceId: string): Promise<InvoiceLi
   return data?.map((row: any) => ({
     id: row.id,
     invoiceId: row.invoice_id,
-    productId: row.product_id,
+    productId: row.product_id || undefined,
     productName: row.product_name,
-    description: row.description,
+    description: row.description || undefined,
     quantity: row.quantity,
     unit: row.unit,
     unitPrice: row.unit_price,
     totalPrice: row.total_price,
     vatRate: row.vat_rate,
-    matchedProductId: row.matched_product_id,
-    matchConfidence: row.match_confidence,
-    needsReview: row.needs_review,
-    notes: row.notes,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    matchedProductId: row.matched_product_id || undefined,
+    matchConfidence: row.match_confidence || undefined,
+    needsReview: row.needs_review || false,
+    notes: row.notes || undefined,
+    createdAt: row.created_at || new Date().toISOString(),
+    updatedAt: row.updated_at || new Date().toISOString()
   })) || [];
 }
 
 export async function createInvoiceLineItem(lineItem: Omit<InvoiceLineItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<InvoiceLineItem> {
   const { data, error } = await supabase
-    .from('invoice_line_items' as any)
+    .from('invoice_line_items')
     .insert({
       invoice_id: lineItem.invoiceId,
       product_id: lineItem.productId,
@@ -971,7 +973,7 @@ export async function updateInvoiceLineItem(id: string, updates: Partial<Invoice
   if (updates.notes !== undefined) updateData.notes = updates.notes;
 
   const { data, error } = await supabase
-    .from('invoice_line_items' as any)
+    .from('invoice_line_items')
     .update(updateData)
     .eq('id', id)
     .select()
@@ -1001,7 +1003,7 @@ export async function updateInvoiceLineItem(id: string, updates: Partial<Invoice
 
 export async function deleteInvoiceLineItem(id: string): Promise<void> {
   const { error } = await supabase
-    .from('invoice_line_items' as any)
+    .from('invoice_line_items')
     .delete()
     .eq('id', id);
   

@@ -74,6 +74,162 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_line_items: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          invoice_id: string
+          match_confidence: number | null
+          matched_product_id: string | null
+          needs_review: boolean | null
+          notes: string | null
+          product_id: string | null
+          product_name: string
+          quantity: number
+          total_price: number
+          unit: string
+          unit_price: number
+          updated_at: string | null
+          vat_rate: number
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          invoice_id: string
+          match_confidence?: number | null
+          matched_product_id?: string | null
+          needs_review?: boolean | null
+          notes?: string | null
+          product_id?: string | null
+          product_name: string
+          quantity: number
+          total_price: number
+          unit: string
+          unit_price: number
+          updated_at?: string | null
+          vat_rate?: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          invoice_id?: string
+          match_confidence?: number | null
+          matched_product_id?: string | null
+          needs_review?: boolean | null
+          notes?: string | null
+          product_id?: string | null
+          product_name?: string
+          quantity?: number
+          total_price?: number
+          unit?: string
+          unit_price?: number
+          updated_at?: string | null
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_matched_product_id_fkey"
+            columns: ["matched_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          created_at: string | null
+          currency: string
+          discount_amount: number | null
+          extracted_data: Json | null
+          file_name: string | null
+          file_path: string | null
+          file_size: number | null
+          id: string
+          invoice_date: string
+          invoice_number: string
+          mime_type: string | null
+          notes: string | null
+          processed_at: string | null
+          processed_by: string | null
+          status: string
+          supplier_id: string
+          total_excl_vat: number
+          total_incl_vat: number
+          updated_at: string | null
+          vat_amount: number
+        }
+        Insert: {
+          created_at?: string | null
+          currency?: string
+          discount_amount?: number | null
+          extracted_data?: Json | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          invoice_date: string
+          invoice_number: string
+          mime_type?: string | null
+          notes?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string
+          supplier_id: string
+          total_excl_vat: number
+          total_incl_vat: number
+          updated_at?: string | null
+          vat_amount: number
+        }
+        Update: {
+          created_at?: string | null
+          currency?: string
+          discount_amount?: number | null
+          extracted_data?: Json | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          mime_type?: string | null
+          notes?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string
+          supplier_id?: string
+          total_excl_vat?: number
+          total_incl_vat?: number
+          updated_at?: string | null
+          vat_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string | null
@@ -388,3 +544,43 @@ export type TablesUpdate<
       ? U
       : never
     : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
