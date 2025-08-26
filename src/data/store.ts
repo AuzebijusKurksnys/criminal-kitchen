@@ -805,19 +805,19 @@ export async function createInvoice(invoice: Omit<Invoice, 'id' | 'createdAt' | 
     totalExclVat: data.total_excl_vat,
     totalInclVat: data.total_incl_vat,
     vatAmount: data.vat_amount,
-    discountAmount: data.discount_amount,
-    currency: data.currency,
-    status: data.status,
-    filePath: data.file_path,
-    fileName: data.file_name,
-    fileSize: data.file_size,
-    mimeType: data.mime_type,
+    discountAmount: data.discount_amount ?? 0,
+    currency: data.currency as Currency,
+    status: data.status as InvoiceStatus,
+    filePath: data.file_path ?? undefined,
+    fileName: data.file_name ?? undefined,
+    fileSize: data.file_size ?? undefined,
+    mimeType: data.mime_type ?? undefined,
     extractedData: data.extracted_data,
-    notes: data.notes,
-    processedAt: data.processed_at,
-    processedBy: data.processed_by,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at
+    notes: data.notes ?? undefined,
+    processedAt: data.processed_at ?? undefined,
+    processedBy: data.processed_by ?? undefined,
+    createdAt: data.created_at ?? new Date().toISOString(),
+    updatedAt: data.updated_at ?? new Date().toISOString()
   };
 }
 
@@ -859,19 +859,19 @@ export async function updateInvoice(id: string, updates: Partial<Invoice>): Prom
     totalExclVat: data.total_excl_vat,
     totalInclVat: data.total_incl_vat,
     vatAmount: data.vat_amount,
-    discountAmount: data.discount_amount,
-    currency: data.currency,
-    status: data.status,
-    filePath: data.file_path,
-    fileName: data.file_name,
-    fileSize: data.file_size,
-    mimeType: data.mime_type,
+    discountAmount: data.discount_amount ?? 0,
+    currency: data.currency as Currency,
+    status: data.status as InvoiceStatus,
+    filePath: data.file_path ?? undefined,
+    fileName: data.file_name ?? undefined,
+    fileSize: data.file_size ?? undefined,
+    mimeType: data.mime_type ?? undefined,
     extractedData: data.extracted_data,
-    notes: data.notes,
-    processedAt: data.processed_at,
-    processedBy: data.processed_by,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at
+    notes: data.notes ?? undefined,
+    processedAt: data.processed_at ?? undefined,
+    processedBy: data.processed_by ?? undefined,
+    createdAt: data.created_at ?? new Date().toISOString(),
+    updatedAt: data.updated_at ?? new Date().toISOString()
   };
 }
 

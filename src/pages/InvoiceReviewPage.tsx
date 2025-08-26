@@ -239,8 +239,7 @@ export function InvoiceReviewPage() {
               productId,
               supplierId: selectedSupplierId,
               price: lineItem.unitPrice || 0,
-              currency: 'EUR',
-              last_updated: generateTimestamp()
+              currency: 'EUR'
             });
             console.log('Supplier price created');
           } catch (error) {
