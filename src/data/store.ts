@@ -382,7 +382,7 @@ export async function createSupplierPrice(supplierPrice: Omit<SupplierPrice, 'id
         .eq('product_id', supplierPrice.productId);
     }
     
-    const insertData: TablesInsert<'supplier_prices'> = {
+    const insertData = {
       product_id: supplierPrice.productId,
       supplier_id: supplierPrice.supplierId,
       price: supplierPrice.price,

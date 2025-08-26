@@ -274,6 +274,7 @@ export type Database = {
           created_at: string | null
           currency: string
           id: string
+          invoice_id: string | null
           last_updated: string | null
           preferred: boolean | null
           price: number
@@ -284,6 +285,7 @@ export type Database = {
           created_at?: string | null
           currency?: string
           id?: string
+          invoice_id?: string | null
           last_updated?: string | null
           preferred?: boolean | null
           price: number
@@ -294,6 +296,7 @@ export type Database = {
           created_at?: string | null
           currency?: string
           id?: string
+          invoice_id?: string | null
           last_updated?: string | null
           preferred?: boolean | null
           price?: number
@@ -301,6 +304,13 @@ export type Database = {
           supplier_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "supplier_prices_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "supplier_prices_product_id_fkey"
             columns: ["product_id"]

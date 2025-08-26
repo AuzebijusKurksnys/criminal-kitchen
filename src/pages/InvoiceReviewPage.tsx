@@ -154,7 +154,7 @@ export function InvoiceReviewPage() {
         invoiceNumber: extractedData.invoice.invoiceNumber 
       });
       
-      const existingInvoice = await checkInvoiceExists(selectedSupplierId, extractedData.invoice.invoiceNumber);
+      const existingInvoice = await checkInvoiceExists(selectedSupplierId!, extractedData.invoice.invoiceNumber!);
       if (existingInvoice) {
         showToast('error', `Invoice ${extractedData.invoice.invoiceNumber} already exists for this supplier`);
         setIsProcessing(false);

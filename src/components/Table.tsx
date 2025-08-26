@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 export interface TableColumn<T> {
   key: keyof T | string;
-  label: string;
+  label: string | React.ReactNode;
   sortable?: boolean;
   render?: (value: any, item: T) => React.ReactNode;
   className?: string;
@@ -104,7 +104,7 @@ export function Table<T>({
                   onClick={() => column.sortable && handleSort(String(column.key))}
                 >
                   <div className="flex items-center space-x-1">
-                    <span>{column.label}</span>
+                    {typeof column.label === 'string' ? <span>{column.label}</span> : column.label}
                     {column.sortable && (
                       <div className="flex flex-col">
                         <svg
