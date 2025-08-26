@@ -21,10 +21,12 @@ export function InvoicesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'all'>('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; invoice: Invoice | null }>({
     show: false,
     invoice: null
   });
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -80,6 +82,52 @@ export function InvoicesPage() {
     }
   };
 
+  const handleSelectInvoice = (invoiceId: string) => {
+    const newSelected = new Set(selectedInvoices);
+    if (newSelected.has(invoiceId)) {
+      newSelected.delete(invoiceId);
+    } else {
+      newSelected.add(invoiceId);
+    }
+    setSelectedInvoices(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedInvoices.size === filteredInvoices.length) {
+      // Deselect all
+      setSelectedInvoices(new Set());
+    } else {
+      // Select all filtered invoices
+      setSelectedInvoices(new Set(filteredInvoices.map(invoice => invoice.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      console.log('Bulk deleting invoices:', Array.from(selectedInvoices));
+      
+      for (const invoiceId of selectedInvoices) {
+        const invoice = invoices.find(inv => inv.id === invoiceId);
+        if (invoice) {
+          // Delete file if it exists
+          if (invoice.filePath) {
+            await deleteInvoiceFile(invoice.filePath);
+          }
+          
+          // Delete invoice record
+          await deleteInvoice(invoice.id);
+        }
+      }
+      
+      setSelectedInvoices(new Set());
+      await loadInvoices();
+      showToast('success', `${selectedInvoices.size} invoices deleted successfully`);
+    } catch (error) {
+      console.error('Error bulk deleting invoices:', error);
+      showToast('error', 'Failed to delete invoices');
+    }
+  };
+
   const handleDeleteInvoice = async (invoice: Invoice) => {
     try {
       // Delete file if exists
@@ -113,9 +161,37 @@ export function InvoicesPage() {
     }
   };
 
-
+  // Selection state calculations
+  const isAllSelected = filteredInvoices.length > 0 && selectedInvoices.size === filteredInvoices.length;
+  const isPartiallySelected = selectedInvoices.size > 0 && selectedInvoices.size < filteredInvoices.length;
 
   const columns = [
+    {
+      key: 'select',
+      label: (
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            checked={isAllSelected}
+            ref={input => {
+              if (input) input.indeterminate = isPartiallySelected;
+            }}
+            onChange={handleSelectAll}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+        </div>
+      ),
+      render: (_value: any, invoice: Invoice) => (
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            checked={selectedInvoices.has(invoice.id)}
+            onChange={() => handleSelectInvoice(invoice.id)}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+        </div>
+      ),
+    },
     {
       key: 'invoiceNumber',
       label: 'Invoice #',
@@ -237,6 +313,21 @@ export function InvoicesPage() {
         />
       </div>
 
+      {/* Bulk Actions */}
+      {selectedInvoices.size > 0 && (
+        <div className="mb-4 flex items-center justify-between bg-blue-50 p-4 rounded-lg border border-blue-200">
+          <div className="text-sm text-blue-700">
+            {selectedInvoices.size} invoice{selectedInvoices.size !== 1 ? 's' : ''} selected
+          </div>
+          <button
+            onClick={() => setBulkDeleteConfirm(true)}
+            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+          >
+            🗑️ Delete Selected ({selectedInvoices.size})
+          </button>
+        </div>
+      )}
+
       {/* Invoice Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {(['pending', 'review', 'approved', 'rejected'] as InvoiceStatus[]).map(status => {
@@ -308,6 +399,21 @@ export function InvoicesPage() {
           setDeleteConfirm({ show: false, invoice: null });
         }}
         onCancel={() => setDeleteConfirm({ show: false, invoice: null })}
+      />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={bulkDeleteConfirm}
+        title="Delete Multiple Invoices"
+        message={`Are you sure you want to delete ${selectedInvoices.size} selected invoice${selectedInvoices.size !== 1 ? 's' : ''}? This action cannot be undone and will also delete associated files.`}
+        confirmLabel={`Delete ${selectedInvoices.size} Invoice${selectedInvoices.size !== 1 ? 's' : ''}`}
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => {
+          handleBulkDelete();
+          setBulkDeleteConfirm(false);
+        }}
+        onCancel={() => setBulkDeleteConfirm(false)}
       />
     </div>
   );
