@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Product, Supplier, SupplierPrice } from '../data/types';
-import { listAllSupplierPrices, listProducts, listSuppliers } from '../data/store';
+import { listAllSupplierPrices, listProducts, listSuppliers, deleteSupplierPrice } from '../data/store';
 import { Table, TableColumn } from '../components/Table';
 import { SearchInput } from '../components/SearchInput';
 import { Select } from '../components/Select';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { formatPrice } from '../utils/format';
 import { useToast } from '../components/Toast';
 
@@ -16,11 +17,19 @@ interface SupplierPriceWithDetails extends SupplierPrice {
 
 export function AllSupplierPricesPage() {
   const navigate = useNavigate();
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
   const [supplierPrices, setSupplierPrices] = useState<SupplierPriceWithDetails[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Selection state
+  const [selectedPrices, setSelectedPrices] = useState<Set<string>>(new Set());
+  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; price: SupplierPriceWithDetails | null }>({
+    show: false,
+    price: null
+  });
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,6 +86,55 @@ export function AllSupplierPricesPage() {
     }
   };
 
+  // Selection handlers
+  const handleSelectPrice = (priceId: string) => {
+    const newSelected = new Set(selectedPrices);
+    if (newSelected.has(priceId)) {
+      newSelected.delete(priceId);
+    } else {
+      newSelected.add(priceId);
+    }
+    setSelectedPrices(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedPrices.size === filteredPrices.length) {
+      // Deselect all
+      setSelectedPrices(new Set());
+    } else {
+      // Select all filtered prices
+      setSelectedPrices(new Set(filteredPrices.map(price => price.id)));
+    }
+  };
+
+  const handleDeletePrice = async (price: SupplierPriceWithDetails) => {
+    try {
+      await deleteSupplierPrice(price.id);
+      await loadData();
+      showSuccess('Supplier price deleted successfully');
+    } catch (error) {
+      console.error('Error deleting supplier price:', error);
+      showError('Failed to delete supplier price');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      console.log('Bulk deleting supplier prices:', Array.from(selectedPrices));
+      
+      for (const priceId of selectedPrices) {
+        await deleteSupplierPrice(priceId);
+      }
+      
+      setSelectedPrices(new Set());
+      await loadData();
+      showSuccess(`${selectedPrices.size} supplier prices deleted successfully`);
+    } catch (error) {
+      console.error('Error bulk deleting supplier prices:', error);
+      showError('Failed to delete supplier prices');
+    }
+  };
+
   // Filter logic
   const filteredPrices = supplierPrices.filter(price => {
     const matchesSearch = 
@@ -111,7 +169,37 @@ export function AllSupplierPricesPage() {
     { value: 'not-preferred', label: 'Non-Preferred Only' }
   ];
 
+  // Selection state calculations
+  const isAllSelected = filteredPrices.length > 0 && selectedPrices.size === filteredPrices.length;
+  const isPartiallySelected = selectedPrices.size > 0 && selectedPrices.size < filteredPrices.length;
+
   const columns: TableColumn<SupplierPriceWithDetails>[] = [
+    {
+      key: 'select',
+      label: (
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            checked={isAllSelected}
+            ref={input => {
+              if (input) input.indeterminate = isPartiallySelected;
+            }}
+            onChange={handleSelectAll}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+        </div>
+      ),
+      render: (_value: any, price: SupplierPriceWithDetails) => (
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            checked={selectedPrices.has(price.id)}
+            onChange={() => handleSelectPrice(price.id)}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+        </div>
+      ),
+    },
     {
       key: 'productSku',
       label: 'SKU',
@@ -189,6 +277,21 @@ export function AllSupplierPricesPage() {
       render: (value) => (
         <div className="text-sm text-gray-600">
           {new Date(value).toLocaleDateString()}
+        </div>
+      ),
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (_value: any, price: SupplierPriceWithDetails) => (
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setDeleteConfirm({ show: true, price })}
+            className="text-red-600 hover:text-red-800 text-sm"
+            title="Delete price"
+          >
+            🗑️
+          </button>
         </div>
       ),
     },
@@ -289,6 +392,21 @@ export function AllSupplierPricesPage() {
         </div>
       </div>
 
+      {/* Bulk Actions */}
+      {selectedPrices.size > 0 && (
+        <div className="flex items-center justify-between bg-blue-50 p-4 rounded-lg border border-blue-200">
+          <div className="text-sm text-blue-700">
+            {selectedPrices.size} supplier price{selectedPrices.size !== 1 ? 's' : ''} selected
+          </div>
+          <button
+            onClick={() => setBulkDeleteConfirm(true)}
+            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+          >
+            🗑️ Delete Selected ({selectedPrices.size})
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <Table
@@ -303,6 +421,38 @@ export function AllSupplierPricesPage() {
           }
         />
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteConfirm.show}
+        title="Delete Supplier Price"
+        message={`Are you sure you want to delete the price for "${deleteConfirm.price?.productName}" from "${deleteConfirm.price?.supplierName}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => {
+          if (deleteConfirm.price) {
+            handleDeletePrice(deleteConfirm.price);
+          }
+          setDeleteConfirm({ show: false, price: null });
+        }}
+        onCancel={() => setDeleteConfirm({ show: false, price: null })}
+      />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={bulkDeleteConfirm}
+        title="Delete Multiple Supplier Prices"
+        message={`Are you sure you want to delete ${selectedPrices.size} selected supplier price${selectedPrices.size !== 1 ? 's' : ''}? This action cannot be undone.`}
+        confirmLabel={`Delete ${selectedPrices.size} Price${selectedPrices.size !== 1 ? 's' : ''}`}
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => {
+          handleBulkDelete();
+          setBulkDeleteConfirm(false);
+        }}
+        onCancel={() => setBulkDeleteConfirm(false)}
+      />
     </div>
   );
 }
