@@ -337,7 +337,10 @@ export async function listSupplierPrices(productId?: string): Promise<SupplierPr
   try {
     let query = supabase
       .from('supplier_prices')
-      .select('*')
+      .select(`
+        *,
+        invoices(invoice_number)
+      `)
       .order('last_updated', { ascending: false });
     
     if (productId) {
@@ -356,11 +359,17 @@ export async function listSupplierPrices(productId?: string): Promise<SupplierPr
       currency: row.currency as SupplierPrice['currency'],
       lastUpdated: row.last_updated || new Date().toISOString(),
       preferred: row.preferred || false,
+      invoiceId: row.invoice_id || undefined,
+      invoiceNumber: row.invoices?.invoice_number || undefined,
     }));
   } catch (error) {
     handleSupabaseError(error, 'list supplier prices');
     return [];
   }
+}
+
+export async function listAllSupplierPrices(): Promise<SupplierPrice[]> {
+  return listSupplierPrices(); // Use the same function without productId filter
 }
 
 export async function createSupplierPrice(supplierPrice: Omit<SupplierPrice, 'id' | 'lastUpdated'>): Promise<SupplierPrice> {
@@ -379,6 +388,7 @@ export async function createSupplierPrice(supplierPrice: Omit<SupplierPrice, 'id
       price: supplierPrice.price,
       currency: supplierPrice.currency,
       preferred: supplierPrice.preferred,
+      invoice_id: supplierPrice.invoiceId,
     };
     
     const { data, error } = await supabase

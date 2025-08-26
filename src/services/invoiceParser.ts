@@ -42,15 +42,16 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
     const mimeType = file.type;
 
     const prompt = `
-You are a professional invoice data extraction assistant. Extract ALL information from this invoice image and return a JSON object with the following structure:
+You are an expert invoice OCR specialist. Analyze this invoice image with EXTREME PRECISION and extract ALL data.
 
+REQUIRED JSON STRUCTURE:
 {
   "invoice": {
-    "invoiceNumber": "string",
-    "invoiceDate": "YYYY-MM-DD",
-    "supplierName": "string",
-    "supplierEmail": "string (if available)",
-    "supplierPhone": "string (if available)",
+    "invoiceNumber": "exact invoice number",
+    "invoiceDate": "YYYY-MM-DD format",
+    "supplierName": "exact company name",
+    "supplierEmail": "email if visible",
+    "supplierPhone": "phone if visible",
     "totalExclVat": number,
     "totalInclVat": number,
     "vatAmount": number,
@@ -59,10 +60,10 @@ You are a professional invoice data extraction assistant. Extract ALL informatio
   },
   "lineItems": [
     {
-      "productName": "string",
-      "description": "string (if available)",
+      "productName": "exact product name as written",
+      "description": "additional details if any",
       "quantity": number,
-      "unit": "string (kg, pcs, l, etc.)",
+      "unit": "exact unit (kg/pcs/l/ml/g/etc)",
       "unitPrice": number,
       "totalPrice": number,
       "vatRate": number
@@ -70,24 +71,34 @@ You are a professional invoice data extraction assistant. Extract ALL informatio
   ]
 }
 
-IMPORTANT INSTRUCTIONS:
-1. Extract data from Lithuanian or English invoices
-2. Convert all amounts to numbers (remove currency symbols)
-3. Use standard units: kg, g, l, ml, pcs
-4. If VAT rate is not specified, assume 21%
-5. If discount is not mentioned, set to 0
-6. For dates, use YYYY-MM-DD format
-7. Extract product names exactly as they appear
-8. Include ALL line items, even if some data is missing
-9. If you cannot read certain fields, use reasonable defaults
-10. Return only valid JSON, no additional text
+CRITICAL EXTRACTION RULES:
+1. READ EVERY LINE: Scan the entire invoice systematically - header, body, footer
+2. EXACT TRANSCRIPTION: Copy text exactly as written, including special characters
+3. NUMBERS ONLY: Remove €, $, currencies, commas - convert to pure numbers
+4. DATE FORMAT: Always convert dates to YYYY-MM-DD (e.g., 2025-01-15)
+5. UNITS: Extract exact units as written (kg, vnt, l, ml, etc.)
+6. VAT CALCULATION: If VAT % not shown, calculate from totals or use 21%
+7. LINE ITEMS: Include EVERY product/service line - even with partial data
+8. ZERO VALUES: Use 0 for missing discounts, empty fields
+9. LITHUANIAN TEXT: Handle Lithuanian invoices (PVM=VAT, Data=Date, etc.)
+10. TABLE STRUCTURE: Look for itemized tables with products, quantities, prices
 
-Be extremely accurate and extract every detail you can see.
+QUALITY CHECKS:
+- Verify line items sum matches invoice total (±0.01 tolerance)
+- Ensure dates are logical (not future dates unless legitimate)
+- Confirm VAT calculations make sense
+- Double-check all numeric values are properly extracted
+
+Extract EVERYTHING visible. If text is unclear, make best effort but be accurate.
 `;
 
     const response = await openaiClient.chat.completions.create({
       model: "gpt-4o",
       messages: [
+        {
+          role: "system",
+          content: "You are a highly accurate invoice data extraction specialist. You MUST extract every piece of information from invoices with 100% accuracy. Return only valid JSON."
+        },
         {
           role: "user",
           content: [
@@ -102,8 +113,9 @@ Be extremely accurate and extract every detail you can see.
           ]
         }
       ],
-      max_tokens: 2000,
-      temperature: 0.1 // Low temperature for consistent extraction
+      max_tokens: 4000, // Increased for complex invoices
+      temperature: 0, // Zero temperature for maximum consistency
+      response_format: { type: "json_object" } // Ensure JSON response
     });
 
     const content = response.choices[0]?.message?.content;
@@ -118,9 +130,24 @@ Be extremely accurate and extract every detail you can see.
       const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
       const jsonString = jsonMatch ? jsonMatch[1] : content;
       extractedData = JSON.parse(jsonString);
+      
+      // Validate required structure
+      if (!extractedData.invoice || !extractedData.lineItems) {
+        throw new Error('Invalid response structure: missing invoice or lineItems');
+      }
+      
+      console.log('OpenAI extraction successful:', {
+        invoiceNumber: extractedData.invoice?.invoiceNumber,
+        lineItemsCount: extractedData.lineItems?.length || 0,
+        totalInclVat: extractedData.invoice?.totalInclVat
+      });
+      
     } catch (parseError) {
-      console.error('Failed to parse OpenAI response:', content);
-      throw new Error('Failed to parse invoice data. Please try again or process manually.');
+      console.error('Failed to parse OpenAI response:', {
+        content: content.substring(0, 500) + '...',
+        error: parseError
+      });
+      throw new Error(`Failed to parse invoice data: ${parseError instanceof Error ? parseError.message : 'Invalid JSON format'}. Please try again or check the image quality.`);
     }
 
     // Validate and transform the extracted data

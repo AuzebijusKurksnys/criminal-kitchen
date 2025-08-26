@@ -27,6 +27,8 @@ export interface SupplierPrice {
   currency: Currency;
   lastUpdated: string; // ISO timestamp
   preferred?: boolean;
+  invoiceId?: string; // Reference to the invoice where this price was updated
+  invoiceNumber?: string; // For display purposes
 }
 
 export interface TechCardIngredient {
