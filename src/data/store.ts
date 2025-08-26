@@ -7,6 +7,8 @@ import type {
   CleaningLog,
   EquipmentCheck,
   RestaurantConfig,
+  Invoice,
+  InvoiceLineItem,
 } from './types';
 import { DEFAULT_CURRENCY, DEFAULT_MARKUP_MULTIPLIER } from './constants';
 import { supabase, handleSupabaseError } from '../lib/supabase';
@@ -690,4 +692,351 @@ export async function seedSuppliersOnly(): Promise<void> {
   } catch (error) {
     console.error('Error seeding suppliers:', error);
   }
+}
+
+// Invoice Management Functions
+export async function listInvoices(): Promise<Invoice[]> {
+  const { data, error } = await supabase
+    .from('invoices' as any)
+    .select(`
+      *,
+      suppliers(name)
+    `)
+    .order('created_at', { ascending: false });
+  
+  if (error) throw error;
+  return data?.map((row: any) => ({
+    id: row.id,
+    supplierId: row.supplier_id,
+    invoiceNumber: row.invoice_number,
+    invoiceDate: row.invoice_date,
+    totalExclVat: row.total_excl_vat,
+    totalInclVat: row.total_incl_vat,
+    vatAmount: row.vat_amount,
+    discountAmount: row.discount_amount,
+    currency: row.currency,
+    status: row.status,
+    filePath: row.file_path,
+    fileName: row.file_name,
+    fileSize: row.file_size,
+    mimeType: row.mime_type,
+    extractedData: row.extracted_data,
+    notes: row.notes,
+    processedAt: row.processed_at,
+    processedBy: row.processed_by,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    supplierName: row.suppliers?.name
+  } as any)) || [];
+}
+
+export async function getInvoice(id: string): Promise<Invoice | null> {
+  const { data, error } = await supabase
+    .from('invoices' as any)
+    .select(`
+      *,
+      suppliers(name)
+    `)
+    .eq('id', id)
+    .single();
+  
+  if (error) return null;
+  if (!data) return null;
+  
+  return {
+    id: data.id,
+    supplierId: data.supplier_id,
+    invoiceNumber: data.invoice_number,
+    invoiceDate: data.invoice_date,
+    totalExclVat: data.total_excl_vat,
+    totalInclVat: data.total_incl_vat,
+    vatAmount: data.vat_amount,
+    discountAmount: data.discount_amount,
+    currency: data.currency,
+    status: data.status,
+    filePath: data.file_path,
+    fileName: data.file_name,
+    fileSize: data.file_size,
+    mimeType: data.mime_type,
+    extractedData: data.extracted_data,
+    notes: data.notes,
+    processedAt: data.processed_at,
+    processedBy: data.processed_by,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+    supplierName: data.suppliers?.name
+  } as any;
+}
+
+export async function createInvoice(invoice: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>): Promise<Invoice> {
+  const { data, error } = await supabase
+    .from('invoices' as any)
+    .insert({
+      supplier_id: invoice.supplierId,
+      invoice_number: invoice.invoiceNumber,
+      invoice_date: invoice.invoiceDate,
+      total_excl_vat: invoice.totalExclVat,
+      total_incl_vat: invoice.totalInclVat,
+      vat_amount: invoice.vatAmount,
+      discount_amount: invoice.discountAmount,
+      currency: invoice.currency,
+      status: invoice.status,
+      file_path: invoice.filePath,
+      file_name: invoice.fileName,
+      file_size: invoice.fileSize,
+      mime_type: invoice.mimeType,
+      extracted_data: invoice.extractedData,
+      notes: invoice.notes,
+      processed_at: invoice.processedAt,
+      processed_by: invoice.processedBy
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  
+  return {
+    id: data.id,
+    supplierId: data.supplier_id,
+    invoiceNumber: data.invoice_number,
+    invoiceDate: data.invoice_date,
+    totalExclVat: data.total_excl_vat,
+    totalInclVat: data.total_incl_vat,
+    vatAmount: data.vat_amount,
+    discountAmount: data.discount_amount,
+    currency: data.currency,
+    status: data.status,
+    filePath: data.file_path,
+    fileName: data.file_name,
+    fileSize: data.file_size,
+    mimeType: data.mime_type,
+    extractedData: data.extracted_data,
+    notes: data.notes,
+    processedAt: data.processed_at,
+    processedBy: data.processed_by,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at
+  };
+}
+
+export async function updateInvoice(id: string, updates: Partial<Invoice>): Promise<Invoice> {
+  const updateData: any = {};
+  
+  if (updates.supplierId !== undefined) updateData.supplier_id = updates.supplierId;
+  if (updates.invoiceNumber !== undefined) updateData.invoice_number = updates.invoiceNumber;
+  if (updates.invoiceDate !== undefined) updateData.invoice_date = updates.invoiceDate;
+  if (updates.totalExclVat !== undefined) updateData.total_excl_vat = updates.totalExclVat;
+  if (updates.totalInclVat !== undefined) updateData.total_incl_vat = updates.totalInclVat;
+  if (updates.vatAmount !== undefined) updateData.vat_amount = updates.vatAmount;
+  if (updates.discountAmount !== undefined) updateData.discount_amount = updates.discountAmount;
+  if (updates.currency !== undefined) updateData.currency = updates.currency;
+  if (updates.status !== undefined) updateData.status = updates.status;
+  if (updates.filePath !== undefined) updateData.file_path = updates.filePath;
+  if (updates.fileName !== undefined) updateData.file_name = updates.fileName;
+  if (updates.fileSize !== undefined) updateData.file_size = updates.fileSize;
+  if (updates.mimeType !== undefined) updateData.mime_type = updates.mimeType;
+  if (updates.extractedData !== undefined) updateData.extracted_data = updates.extractedData;
+  if (updates.notes !== undefined) updateData.notes = updates.notes;
+  if (updates.processedAt !== undefined) updateData.processed_at = updates.processedAt;
+  if (updates.processedBy !== undefined) updateData.processed_by = updates.processedBy;
+
+  const { data, error } = await supabase
+    .from('invoices' as any)
+    .update(updateData)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  
+  return {
+    id: data.id,
+    supplierId: data.supplier_id,
+    invoiceNumber: data.invoice_number,
+    invoiceDate: data.invoice_date,
+    totalExclVat: data.total_excl_vat,
+    totalInclVat: data.total_incl_vat,
+    vatAmount: data.vat_amount,
+    discountAmount: data.discount_amount,
+    currency: data.currency,
+    status: data.status,
+    filePath: data.file_path,
+    fileName: data.file_name,
+    fileSize: data.file_size,
+    mimeType: data.mime_type,
+    extractedData: data.extracted_data,
+    notes: data.notes,
+    processedAt: data.processed_at,
+    processedBy: data.processed_by,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at
+  };
+}
+
+export async function deleteInvoice(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('invoices' as any)
+    .delete()
+    .eq('id', id);
+  
+  if (error) throw error;
+}
+
+// Invoice Line Items Functions
+export async function listInvoiceLineItems(invoiceId: string): Promise<InvoiceLineItem[]> {
+  const { data, error } = await supabase
+    .from('invoice_line_items' as any)
+    .select('*')
+    .eq('invoice_id', invoiceId)
+    .order('created_at', { ascending: true });
+  
+  if (error) throw error;
+  return data?.map((row: any) => ({
+    id: row.id,
+    invoiceId: row.invoice_id,
+    productId: row.product_id,
+    productName: row.product_name,
+    description: row.description,
+    quantity: row.quantity,
+    unit: row.unit,
+    unitPrice: row.unit_price,
+    totalPrice: row.total_price,
+    vatRate: row.vat_rate,
+    matchedProductId: row.matched_product_id,
+    matchConfidence: row.match_confidence,
+    needsReview: row.needs_review,
+    notes: row.notes,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  })) || [];
+}
+
+export async function createInvoiceLineItem(lineItem: Omit<InvoiceLineItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<InvoiceLineItem> {
+  const { data, error } = await supabase
+    .from('invoice_line_items' as any)
+    .insert({
+      invoice_id: lineItem.invoiceId,
+      product_id: lineItem.productId,
+      product_name: lineItem.productName,
+      description: lineItem.description,
+      quantity: lineItem.quantity,
+      unit: lineItem.unit,
+      unit_price: lineItem.unitPrice,
+      total_price: lineItem.totalPrice,
+      vat_rate: lineItem.vatRate,
+      matched_product_id: lineItem.matchedProductId,
+      match_confidence: lineItem.matchConfidence,
+      needs_review: lineItem.needsReview,
+      notes: lineItem.notes
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  
+  return {
+    id: data.id,
+    invoiceId: data.invoice_id,
+    productId: data.product_id,
+    productName: data.product_name,
+    description: data.description,
+    quantity: data.quantity,
+    unit: data.unit,
+    unitPrice: data.unit_price,
+    totalPrice: data.total_price,
+    vatRate: data.vat_rate,
+    matchedProductId: data.matched_product_id,
+    matchConfidence: data.match_confidence,
+    needsReview: data.needs_review,
+    notes: data.notes,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at
+  };
+}
+
+export async function updateInvoiceLineItem(id: string, updates: Partial<InvoiceLineItem>): Promise<InvoiceLineItem> {
+  const updateData: any = {};
+  
+  if (updates.productId !== undefined) updateData.product_id = updates.productId;
+  if (updates.productName !== undefined) updateData.product_name = updates.productName;
+  if (updates.description !== undefined) updateData.description = updates.description;
+  if (updates.quantity !== undefined) updateData.quantity = updates.quantity;
+  if (updates.unit !== undefined) updateData.unit = updates.unit;
+  if (updates.unitPrice !== undefined) updateData.unit_price = updates.unitPrice;
+  if (updates.totalPrice !== undefined) updateData.total_price = updates.totalPrice;
+  if (updates.vatRate !== undefined) updateData.vat_rate = updates.vatRate;
+  if (updates.matchedProductId !== undefined) updateData.matched_product_id = updates.matchedProductId;
+  if (updates.matchConfidence !== undefined) updateData.match_confidence = updates.matchConfidence;
+  if (updates.needsReview !== undefined) updateData.needs_review = updates.needsReview;
+  if (updates.notes !== undefined) updateData.notes = updates.notes;
+
+  const { data, error } = await supabase
+    .from('invoice_line_items' as any)
+    .update(updateData)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  
+  return {
+    id: data.id,
+    invoiceId: data.invoice_id,
+    productId: data.product_id,
+    productName: data.product_name,
+    description: data.description,
+    quantity: data.quantity,
+    unit: data.unit,
+    unitPrice: data.unit_price,
+    totalPrice: data.total_price,
+    vatRate: data.vat_rate,
+    matchedProductId: data.matched_product_id,
+    matchConfidence: data.match_confidence,
+    needsReview: data.needs_review,
+    notes: data.notes,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at
+  };
+}
+
+export async function deleteInvoiceLineItem(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('invoice_line_items' as any)
+    .delete()
+    .eq('id', id);
+  
+  if (error) throw error;
+}
+
+// File Upload Functions
+export async function uploadInvoiceFile(file: File, invoiceId: string): Promise<string> {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${invoiceId}-${Date.now()}.${fileExt}`;
+  const filePath = `${invoiceId}/${fileName}`;
+
+  const { error } = await supabase.storage
+    .from('invoices')
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: false
+    });
+
+  if (error) throw error;
+  return filePath;
+}
+
+export async function getInvoiceFileUrl(filePath: string): Promise<string> {
+  const { data } = await supabase.storage
+    .from('invoices')
+    .createSignedUrl(filePath, 60 * 60); // 1 hour expiry
+
+  return data?.signedUrl || '';
+}
+
+export async function deleteInvoiceFile(filePath: string): Promise<void> {
+  const { error } = await supabase.storage
+    .from('invoices')
+    .remove([filePath]);
+
+  if (error) throw error;
 }

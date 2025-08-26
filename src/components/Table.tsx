@@ -11,10 +11,11 @@ export interface TableColumn<T> {
 interface TableProps<T> {
   data: T[];
   columns: TableColumn<T>[];
-  keyExtractor: (item: T) => string;
+  keyExtractor?: (item: T) => string;
   className?: string;
   emptyMessage?: string;
   loading?: boolean;
+  sortable?: boolean;
 }
 
 type SortDirection = 'asc' | 'desc' | null;
@@ -136,8 +137,8 @@ export function Table<T>({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {sortedData.map((item) => (
-              <tr key={keyExtractor(item)} className="table-row">
+            {sortedData.map((item, index) => (
+              <tr key={keyExtractor ? keyExtractor(item) : index} className="table-row">
                 {columns.map((column) => {
                   const value = (item as any)[column.key];
                   return (

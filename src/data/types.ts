@@ -85,3 +85,68 @@ export interface RestaurantConfig {
   currency: Currency;
   markupMultiplier: number;
 }
+
+// Invoice Management Types
+export type InvoiceStatus = 'pending' | 'processing' | 'review' | 'approved' | 'rejected';
+
+export interface Invoice {
+  id: string;
+  supplierId: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  totalExclVat: number;
+  totalInclVat: number;
+  vatAmount: number;
+  discountAmount: number;
+  currency: Currency;
+  status: InvoiceStatus;
+  filePath?: string; // Path to stored PDF/image
+  fileName?: string;
+  fileSize?: number;
+  mimeType?: string;
+  extractedData?: any; // Raw OCR data for debugging
+  notes?: string;
+  processedAt?: string;
+  processedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InvoiceLineItem {
+  id: string;
+  invoiceId: string;
+  productId?: string; // null if product not matched yet
+  productName: string; // As appears on invoice
+  description?: string;
+  quantity: number;
+  unit: string; // As appears on invoice
+  unitPrice: number;
+  totalPrice: number;
+  vatRate: number;
+  matchedProductId?: string; // Suggested/confirmed product match
+  matchConfidence?: number; // 0-1 confidence score
+  needsReview: boolean;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProductMatch {
+  productId: string;
+  product: Product;
+  confidence: number;
+  reason: string; // Why this match was suggested
+}
+
+export interface InvoiceProcessingResult {
+  invoice: Partial<Invoice>;
+  lineItems: Partial<InvoiceLineItem>[];
+  matches: { [lineItemIndex: number]: ProductMatch[] };
+  errors: string[];
+  warnings: string[];
+  supplierInfo?: {
+    name: string;
+    email?: string;
+    phone?: string;
+  };
+}

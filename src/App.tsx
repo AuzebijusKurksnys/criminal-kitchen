@@ -1,10 +1,25 @@
+import { useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AppRoutes } from './AppRoutes';
 import { ToastProvider } from './components/Toast';
 import { NavBar } from './components/NavBar';
+import { initializeOpenAI } from './services/invoiceParser';
 
 function App() {
-  // No auto-seeding - database starts clean
+  // Initialize settings on app startup
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('criminal-kitchen-settings');
+      if (stored) {
+        const settings = JSON.parse(stored);
+        if (settings.openaiApiKey) {
+          initializeOpenAI(settings.openaiApiKey);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading settings on startup:', error);
+    }
+  }, []);
 
   return (
     <ToastProvider>

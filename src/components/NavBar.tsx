@@ -5,6 +5,7 @@ import { getRestaurantConfig } from '../data/store';
 const navigation = [
   { name: 'Inventory', href: '/inventory' },
   { name: 'Supplier Prices', href: '/supplier-prices' },
+  { name: 'Invoices', href: '/invoices' },
   { name: 'Tech Cards', href: '/tech-cards', badge: 'beta' },
   { name: 'Journals', href: '/journals', badge: 'beta' },
   { name: 'Reports', href: '/reports', badge: 'beta' },
@@ -53,8 +54,18 @@ export function NavBar() {
             </div>
           </div>
           
-          {/* Restaurant selector */}
-          <div className="flex items-center">
+          {/* Restaurant selector and settings */}
+          <div className="flex items-center space-x-4">
+            <Link
+              to="/settings"
+              className={`p-2 text-gray-400 hover:text-gray-600 rounded-md transition-colors ${
+                location.pathname === '/settings' ? 'text-blue-600' : ''
+              }`}
+              title="Settings"
+            >
+              ⚙️
+            </Link>
+            
             <div className="text-sm text-gray-600">
               <span className="font-medium">{restaurantConfig.name}</span>
             </div>

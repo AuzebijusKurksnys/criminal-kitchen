@@ -19,6 +19,17 @@ export function useToast() {
   return context;
 }
 
+// Export a simple showToast function for convenience
+let toastFunctions: ToastContextType | null = null;
+
+export function showToast(type: ToastMessage['type'], message: string, duration?: number) {
+  if (toastFunctions) {
+    toastFunctions.showToast(message, type, duration);
+  } else {
+    console.warn('Toast not initialized:', type, message);
+  }
+}
+
 interface ToastProviderProps {
   children: React.ReactNode;
 }
@@ -47,12 +58,27 @@ export function ToastProvider({ children }: ToastProviderProps) {
   const showError = (message: string) => showToast(message, 'error');
   const showInfo = (message: string) => showToast(message, 'info');
 
+  const contextValue: ToastContextType = {
+    showToast,
+    showSuccess,
+    showError,
+    showInfo,
+  };
+
+  // Initialize global toast functions
+  React.useEffect(() => {
+    toastFunctions = contextValue;
+    return () => {
+      toastFunctions = null;
+    };
+  }, [contextValue]);
+
   const removeToast = (id: string) => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   };
 
   return (
-    <ToastContext.Provider value={{ showToast, showSuccess, showError, showInfo }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </ToastContext.Provider>

@@ -2,29 +2,29 @@ import React, { useEffect } from 'react';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
-  onClose: () => void;
   onConfirm: () => void;
+  onCancel: () => void;
   title: string;
   message: string;
-  confirmText?: string;
-  cancelText?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
   variant?: 'danger' | 'primary';
 }
 
 export function ConfirmDialog({
   isOpen,
-  onClose,
   onConfirm,
+  onCancel,
   title,
   message,
-  confirmText = 'Confirm',
-  cancelText = 'Cancel',
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
   variant = 'primary',
 }: ConfirmDialogProps) {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        onCancel();
       }
     };
 
@@ -37,19 +37,18 @@ export function ConfirmDialog({
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onCancel]);
 
   if (!isOpen) return null;
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
-      onClose();
+      onCancel();
     }
   };
 
   const handleConfirm = () => {
     onConfirm();
-    onClose();
   };
 
   return (
@@ -107,17 +106,17 @@ export function ConfirmDialog({
           <div className="flex space-x-3 justify-end">
             <button
               type="button"
-              onClick={onClose}
+              onClick={onCancel}
               className="btn-secondary btn-md"
             >
-              {cancelText}
+              {cancelLabel}
             </button>
             <button
               type="button"
               onClick={handleConfirm}
               className={variant === 'danger' ? 'btn-danger btn-md' : 'btn-primary btn-md'}
             >
-              {confirmText}
+              {confirmLabel}
             </button>
           </div>
         </div>
