@@ -13,6 +13,7 @@ import {
   updateProduct,
   createSupplierPrice,
   listProducts,
+  getProduct,
   checkInvoiceExists
 } from '../data/store';
 import { findProductMatches } from '../services/invoiceParser';
@@ -228,7 +229,7 @@ export function InvoiceReviewPage() {
               sku: `AUTO-${Date.now()}-${i}`,
               name: lineItem.productName,
               unit: normalizedUnit,
-              quantity: 0,
+              quantity: lineItem.quantity || 0,
               category: 'Auto-imported'
             });
             
@@ -236,7 +237,7 @@ export function InvoiceReviewPage() {
               sku: `AUTO-${Date.now()}-${i}`,
               name: lineItem.productName,
               unit: normalizedUnit as any,
-              quantity: 0,
+              quantity: lineItem.quantity || 0,
               category: 'Auto-imported'
             });
             productId = newProduct.id;
@@ -290,15 +291,26 @@ export function InvoiceReviewPage() {
 
         // Update inventory and supplier prices
         if (productId) {
-          // Update product quantity
-          const product = products.find(p => p.id === productId);
-          if (product) {
-            console.log('Updating product quantity...');
-            await updateProduct({
-              ...product,
-              quantity: product.quantity + (lineItem.quantity || 0)
+          // For existing products (found in products array), add to existing quantity
+          // For newly created products, the quantity was already set correctly during creation
+          const existingProduct = products.find(p => p.id === productId);
+          
+          if (existingProduct) {
+            // This is an existing product - add invoice quantity to current quantity
+            console.log('Updating existing product quantity...', {
+              productName: existingProduct.name,
+              currentQuantity: existingProduct.quantity,
+              addingQuantity: lineItem.quantity || 0,
+              newTotal: existingProduct.quantity + (lineItem.quantity || 0)
             });
-            console.log('Product quantity updated');
+            await updateProduct({
+              ...existingProduct,
+              quantity: existingProduct.quantity + (lineItem.quantity || 0)
+            });
+            console.log('Existing product quantity updated');
+          } else {
+            // This is a newly created product - quantity was already set correctly during creation
+            console.log('Newly created product quantity already set correctly during creation');
           }
 
           // Update supplier price
