@@ -71,6 +71,7 @@ export async function getProduct(id: string): Promise<Product | undefined> {
 
 export async function createProduct(product: Omit<Product, 'id'>): Promise<Product> {
   try {
+    console.log('createProduct called with:', product);
     const insertData: TablesInsert<'products'> = {
       sku: product.sku,
       name: product.name,
@@ -80,6 +81,7 @@ export async function createProduct(product: Omit<Product, 'id'>): Promise<Produ
       category: product.category,
       notes: product.notes,
     };
+    console.log('insertData for Supabase:', insertData);
     
     const { data, error } = await supabase
       .from('products')

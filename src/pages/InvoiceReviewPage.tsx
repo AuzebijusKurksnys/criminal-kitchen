@@ -210,6 +210,13 @@ export function InvoiceReviewPage() {
             }
             
             console.log(`Normalizing unit from "${lineItem.unit}" to "${normalizedUnit}"`);
+            console.log('About to create product with data:', {
+              sku: `AUTO-${Date.now()}-${i}`,
+              name: lineItem.productName,
+              unit: normalizedUnit,
+              quantity: 0,
+              category: 'Auto-imported'
+            });
             
             const newProduct = await createProduct({
               sku: `AUTO-${Date.now()}-${i}`,
