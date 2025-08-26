@@ -366,6 +366,9 @@ export function InvoiceReviewPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  #
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Product
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -385,6 +388,11 @@ export function InvoiceReviewPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {extractedData.lineItems.map((lineItem, index) => (
                 <tr key={index}>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <span className="text-sm font-medium text-gray-900">
+                      {index + 1}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
                       <input
