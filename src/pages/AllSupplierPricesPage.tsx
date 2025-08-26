@@ -235,12 +235,24 @@ export function AllSupplierPricesPage() {
       ),
     },
     {
-      key: 'price',
-      label: 'Price',
+      key: 'priceExclVat',
+      label: 'Price (excl. VAT)',
       sortable: true,
       render: (value, price) => (
         <div className="text-right">
-          <span className="font-medium">{formatPrice(value, price.currency)}</span>
+          <div className="font-medium">{formatPrice(value, price.currency)}</div>
+          <div className="text-xs text-gray-500">Excl. VAT</div>
+        </div>
+      ),
+    },
+    {
+      key: 'priceInclVat',
+      label: 'Price (incl. VAT)',
+      sortable: true,
+      render: (value, price) => (
+        <div className="text-right">
+          <div className="font-medium text-green-600">{formatPrice(value, price.currency)}</div>
+          <div className="text-xs text-gray-500">Incl. {price.vatRate}% VAT</div>
         </div>
       ),
     },

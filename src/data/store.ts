@@ -355,7 +355,10 @@ export async function listSupplierPrices(productId?: string): Promise<SupplierPr
       id: row.id,
       productId: row.product_id,
       supplierId: row.supplier_id,
-      price: Number(row.price),
+      price: Number(row.price), // Legacy field
+      priceExclVat: Number(row.price_excl_vat),
+      priceInclVat: Number(row.price_incl_vat),
+      vatRate: Number(row.vat_rate),
       currency: row.currency as SupplierPrice['currency'],
       lastUpdated: row.last_updated || new Date().toISOString(),
       preferred: row.preferred || false,
@@ -385,7 +388,10 @@ export async function createSupplierPrice(supplierPrice: Omit<SupplierPrice, 'id
     const insertData = {
       product_id: supplierPrice.productId,
       supplier_id: supplierPrice.supplierId,
-      price: supplierPrice.price,
+      price: supplierPrice.price, // Legacy field
+      price_excl_vat: supplierPrice.priceExclVat,
+      price_incl_vat: supplierPrice.priceInclVat,
+      vat_rate: supplierPrice.vatRate,
       currency: supplierPrice.currency,
       preferred: supplierPrice.preferred,
       invoice_id: supplierPrice.invoiceId,
@@ -406,10 +412,14 @@ export async function createSupplierPrice(supplierPrice: Omit<SupplierPrice, 'id
       id: data.id,
       productId: data.product_id,
       supplierId: data.supplier_id,
-      price: Number(data.price),
+      price: Number(data.price), // Legacy field
+      priceExclVat: Number(data.price_excl_vat),
+      priceInclVat: Number(data.price_incl_vat),
+      vatRate: Number(data.vat_rate),
       currency: data.currency as SupplierPrice['currency'],
       lastUpdated: data.last_updated || new Date().toISOString(),
       preferred: data.preferred || false,
+      invoiceId: data.invoice_id || undefined,
     };
   } catch (error) {
     handleSupabaseError(error, 'create supplier price');
@@ -432,6 +442,9 @@ export async function updateSupplierPrice(supplierPrice: SupplierPrice): Promise
       product_id: supplierPrice.productId,
       supplier_id: supplierPrice.supplierId,
       price: supplierPrice.price,
+      price_excl_vat: supplierPrice.priceExclVat,
+      price_incl_vat: supplierPrice.priceInclVat,
+      vat_rate: supplierPrice.vatRate,
       currency: supplierPrice.currency,
       preferred: supplierPrice.preferred,
       last_updated: new Date().toISOString(),
@@ -450,10 +463,14 @@ export async function updateSupplierPrice(supplierPrice: SupplierPrice): Promise
       id: data.id,
       productId: data.product_id,
       supplierId: data.supplier_id,
-      price: Number(data.price),
+      price: Number(data.price), // Legacy field
+      priceExclVat: Number(data.price_excl_vat),
+      priceInclVat: Number(data.price_incl_vat),
+      vatRate: Number(data.vat_rate),
       currency: data.currency as SupplierPrice['currency'],
       lastUpdated: data.last_updated || new Date().toISOString(),
       preferred: data.preferred || false,
+      invoiceId: data.invoice_id || undefined,
     };
   } catch (error) {
     handleSupabaseError(error, 'update supplier price');
@@ -492,10 +509,14 @@ export async function getPreferredSupplierPrice(productId: string): Promise<Supp
       id: data.id,
       productId: data.product_id,
       supplierId: data.supplier_id,
-      price: Number(data.price),
+      price: Number(data.price), // Legacy field
+      priceExclVat: Number(data.price_excl_vat),
+      priceInclVat: Number(data.price_incl_vat),
+      vatRate: Number(data.vat_rate),
       currency: data.currency as SupplierPrice['currency'],
       lastUpdated: data.last_updated || new Date().toISOString(),
       preferred: data.preferred || false,
+      invoiceId: data.invoice_id || undefined,
     };
   } catch (error) {
     // No preferred supplier is not an error

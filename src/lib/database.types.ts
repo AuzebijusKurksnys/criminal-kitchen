@@ -278,8 +278,11 @@ export type Database = {
           last_updated: string | null
           preferred: boolean | null
           price: number
+          price_excl_vat: number
+          price_incl_vat: number
           product_id: string
           supplier_id: string
+          vat_rate: number | null
         }
         Insert: {
           created_at?: string | null
@@ -289,8 +292,11 @@ export type Database = {
           last_updated?: string | null
           preferred?: boolean | null
           price: number
+          price_excl_vat: number
+          price_incl_vat: number
           product_id: string
           supplier_id: string
+          vat_rate?: number | null
         }
         Update: {
           created_at?: string | null
@@ -300,8 +306,11 @@ export type Database = {
           last_updated?: string | null
           preferred?: boolean | null
           price?: number
+          price_excl_vat?: number
+          price_incl_vat?: number
           product_id?: string
           supplier_id?: string
+          vat_rate?: number | null
         }
         Relationships: [
           {

@@ -23,7 +23,10 @@ export interface SupplierPrice {
   id: string;
   productId: string;
   supplierId: string;
-  price: number;
+  price: number; // Legacy field - use priceExclVat instead
+  priceExclVat: number; // Price excluding VAT
+  priceInclVat: number; // Price including VAT
+  vatRate: number; // VAT rate as percentage (e.g., 21 for 21%)
   currency: Currency;
   lastUpdated: string; // ISO timestamp
   preferred?: boolean;

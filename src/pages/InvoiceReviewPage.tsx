@@ -316,10 +316,18 @@ export function InvoiceReviewPage() {
           // Update supplier price
           try {
             console.log('Creating supplier price...');
+            const unitPrice = lineItem.unitPrice || 0;
+            const vatRate = lineItem.vatRate || 21;
+            const priceExclVat = unitPrice;
+            const priceInclVat = unitPrice * (1 + vatRate / 100);
+            
             await createSupplierPrice({
               productId,
               supplierId: selectedSupplierId,
-              price: lineItem.unitPrice || 0,
+              price: unitPrice, // Legacy field
+              priceExclVat,
+              priceInclVat,
+              vatRate,
               currency: 'EUR',
               invoiceId: invoice.id
             });
