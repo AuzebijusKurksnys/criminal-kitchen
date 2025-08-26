@@ -148,28 +148,36 @@ export function InvoiceReviewPage() {
 
     try {
       // First create the invoice record
+      console.log('Creating invoice...', { extractedData: extractedData.invoice, selectedSupplierId });
       const invoiceId = generateId();
       const invoice = await createInvoice({
         ...extractedData.invoice,
         supplierId: selectedSupplierId,
         status: 'approved'
       } as any);
+      console.log('Invoice created:', invoice);
 
       // Upload the file
+      console.log('Uploading file...');
       const filePath = await uploadInvoiceFile(file, invoice.id);
+      console.log('File uploaded:', filePath);
       
       // Update invoice with file path
+      console.log('Updating invoice with file path...');
       await updateInvoice(invoice.id, {
         filePath,
         fileName: file.name,
         fileSize: file.size,
         mimeType: file.type
       });
+      console.log('Invoice updated with file path');
 
       // Process line items
+      console.log('Processing line items...', extractedData.lineItems.length);
       for (let i = 0; i < extractedData.lineItems.length; i++) {
         const lineItem = extractedData.lineItems[i];
         const selectedProductId = selectedMatches[i];
+        console.log(`Processing line item ${i + 1}:`, lineItem);
         
         let productId = selectedProductId;
         
@@ -180,6 +188,7 @@ export function InvoiceReviewPage() {
           );
           
           if (shouldCreate) {
+            console.log('Creating new product...');
             const newProduct = await createProduct({
               sku: `AUTO-${Date.now()}-${i}`,
               name: lineItem.productName,
@@ -188,10 +197,12 @@ export function InvoiceReviewPage() {
               category: 'Auto-imported'
             });
             productId = newProduct.id;
+            console.log('New product created:', newProduct);
           }
         }
 
         // Create line item
+        console.log('Creating line item...');
         await createInvoiceLineItem({
           invoiceId: invoice.id,
           productId,
@@ -206,19 +217,24 @@ export function InvoiceReviewPage() {
           matchConfidence: productMatches[i]?.[0]?.confidence,
           needsReview: false
         } as any);
+        console.log('Line item created');
 
         // Update inventory and supplier prices
         if (productId) {
           // Update product quantity
           const product = products.find(p => p.id === productId);
           if (product) {
-            await updateProduct(productId, {
+            console.log('Updating product quantity...');
+            await updateProduct({
+              ...product,
               quantity: product.quantity + (lineItem.quantity || 0)
             });
+            console.log('Product quantity updated');
           }
 
           // Update supplier price
           try {
+            console.log('Creating supplier price...');
             await createSupplierPrice({
               productId,
               supplierId: selectedSupplierId,
@@ -226,6 +242,7 @@ export function InvoiceReviewPage() {
               currency: 'EUR',
               lastUpdated: generateTimestamp()
             });
+            console.log('Supplier price created');
           } catch (error) {
             console.warn('Failed to create supplier price:', error);
           }
@@ -237,7 +254,19 @@ export function InvoiceReviewPage() {
       
     } catch (error) {
       console.error('Error processing invoice:', error);
-      showToast('error', 'Failed to process invoice');
+      
+      // Provide more detailed error message
+      let errorMessage = 'Failed to process invoice';
+      if (error instanceof Error) {
+        errorMessage = `Failed to process invoice: ${error.message}`;
+        console.error('Detailed error:', error.stack);
+      } else if (typeof error === 'string') {
+        errorMessage = `Failed to process invoice: ${error}`;
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        errorMessage = `Failed to process invoice: ${(error as any).message}`;
+      }
+      
+      showToast('error', errorMessage);
     } finally {
       setIsProcessing(false);
     }
