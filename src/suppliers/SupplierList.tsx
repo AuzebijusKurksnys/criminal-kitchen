@@ -141,11 +141,11 @@ export function SupplierList({ suppliers, onEdit, onDelete, loading = false }: S
       {/* Delete confirmation dialog */}
       <ConfirmDialog
         isOpen={deleteSupplier !== null}
-        onClose={() => setDeleteSupplier(null)}
+        onCancel={() => setDeleteSupplier(null)}
         onConfirm={handleDeleteConfirm}
         title="Delete Supplier"
         message={`Are you sure you want to delete "${deleteSupplier?.name}"? This action cannot be undone and will also delete all related supplier prices.`}
-        confirmText="Delete"
+        confirmLabel="Delete"
         variant="danger"
       />
     </>

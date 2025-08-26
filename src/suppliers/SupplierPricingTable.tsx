@@ -149,11 +149,11 @@ export function SupplierPricingTable({
       {/* Delete confirmation dialog */}
       <ConfirmDialog
         isOpen={deletePrice !== null}
-        onClose={() => setDeletePrice(null)}
+        onCancel={() => setDeletePrice(null)}
         onConfirm={handleDeleteConfirm}
         title="Delete Supplier Price"
         message={`Are you sure you want to delete this price from ${deletePrice ? getSupplierName(deletePrice.supplierId) : ''}? This action cannot be undone.`}
-        confirmText="Delete"
+        confirmLabel="Delete"
         variant="danger"
       />
     </>

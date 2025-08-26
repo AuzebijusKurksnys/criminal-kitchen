@@ -715,19 +715,19 @@ export async function listInvoices(): Promise<Invoice[]> {
     totalExclVat: row.total_excl_vat,
     totalInclVat: row.total_incl_vat,
     vatAmount: row.vat_amount,
-    discountAmount: row.discount_amount || 0,
+    discountAmount: row.discount_amount ?? 0,
     currency: row.currency as Currency,
     status: row.status as InvoiceStatus,
-    filePath: row.file_path || undefined,
-    fileName: row.file_name || undefined,
-    fileSize: row.file_size || undefined,
-    mimeType: row.mime_type || undefined,
+    filePath: row.file_path ?? undefined,
+    fileName: row.file_name ?? undefined,
+    fileSize: row.file_size ?? undefined,
+    mimeType: row.mime_type ?? undefined,
     extractedData: row.extracted_data,
-    notes: row.notes || undefined,
-    processedAt: row.processed_at || undefined,
-    processedBy: row.processed_by || undefined,
-    createdAt: row.created_at || new Date().toISOString(),
-    updatedAt: row.updated_at || new Date().toISOString(),
+    notes: row.notes ?? undefined,
+    processedAt: row.processed_at ?? undefined,
+    processedBy: row.processed_by ?? undefined,
+    createdAt: row.created_at ?? new Date().toISOString(),
+    updatedAt: row.updated_at ?? new Date().toISOString(),
     supplierName: row.suppliers?.name
   })) || [];
 }
@@ -753,19 +753,19 @@ export async function getInvoice(id: string): Promise<Invoice | null> {
     totalExclVat: data.total_excl_vat,
     totalInclVat: data.total_incl_vat,
     vatAmount: data.vat_amount,
-    discountAmount: data.discount_amount || 0,
+    discountAmount: data.discount_amount ?? 0,
     currency: data.currency as Currency,
     status: data.status as InvoiceStatus,
-    filePath: data.file_path || undefined,
-    fileName: data.file_name || undefined,
-    fileSize: data.file_size || undefined,
-    mimeType: data.mime_type || undefined,
+    filePath: data.file_path ?? undefined,
+    fileName: data.file_name ?? undefined,
+    fileSize: data.file_size ?? undefined,
+    mimeType: data.mime_type ?? undefined,
     extractedData: data.extracted_data,
-    notes: data.notes || undefined,
-    processedAt: data.processed_at || undefined,
-    processedBy: data.processed_by || undefined,
-    createdAt: data.created_at || new Date().toISOString(),
-    updatedAt: data.updated_at || new Date().toISOString(),
+    notes: data.notes ?? undefined,
+    processedAt: data.processed_at ?? undefined,
+    processedBy: data.processed_by ?? undefined,
+    createdAt: data.created_at ?? new Date().toISOString(),
+    updatedAt: data.updated_at ?? new Date().toISOString(),
     supplierName: data.suppliers?.name
   };
 }
@@ -896,20 +896,20 @@ export async function listInvoiceLineItems(invoiceId: string): Promise<InvoiceLi
   return data?.map((row: any) => ({
     id: row.id,
     invoiceId: row.invoice_id,
-    productId: row.product_id || undefined,
+    productId: row.product_id ?? undefined,
     productName: row.product_name,
-    description: row.description || undefined,
+    description: row.description ?? undefined,
     quantity: row.quantity,
     unit: row.unit,
     unitPrice: row.unit_price,
     totalPrice: row.total_price,
     vatRate: row.vat_rate,
-    matchedProductId: row.matched_product_id || undefined,
-    matchConfidence: row.match_confidence || undefined,
-    needsReview: row.needs_review || false,
-    notes: row.notes || undefined,
-    createdAt: row.created_at || new Date().toISOString(),
-    updatedAt: row.updated_at || new Date().toISOString()
+    matchedProductId: row.matched_product_id ?? undefined,
+    matchConfidence: row.match_confidence ?? undefined,
+    needsReview: row.needs_review ?? false,
+    notes: row.notes ?? undefined,
+    createdAt: row.created_at ?? new Date().toISOString(),
+    updatedAt: row.updated_at ?? new Date().toISOString()
   })) || [];
 }
 
@@ -939,20 +939,20 @@ export async function createInvoiceLineItem(lineItem: Omit<InvoiceLineItem, 'id'
   return {
     id: data.id,
     invoiceId: data.invoice_id,
-    productId: data.product_id,
+    productId: data.product_id ?? undefined,
     productName: data.product_name,
-    description: data.description,
+    description: data.description ?? undefined,
     quantity: data.quantity,
     unit: data.unit,
     unitPrice: data.unit_price,
     totalPrice: data.total_price,
     vatRate: data.vat_rate,
-    matchedProductId: data.matched_product_id,
-    matchConfidence: data.match_confidence,
-    needsReview: data.needs_review,
-    notes: data.notes,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at
+    matchedProductId: data.matched_product_id ?? undefined,
+    matchConfidence: data.match_confidence ?? undefined,
+    needsReview: data.needs_review ?? false,
+    notes: data.notes ?? undefined,
+    createdAt: data.created_at ?? new Date().toISOString(),
+    updatedAt: data.updated_at ?? new Date().toISOString()
   };
 }
 
@@ -984,20 +984,20 @@ export async function updateInvoiceLineItem(id: string, updates: Partial<Invoice
   return {
     id: data.id,
     invoiceId: data.invoice_id,
-    productId: data.product_id,
+    productId: data.product_id ?? undefined,
     productName: data.product_name,
-    description: data.description,
+    description: data.description ?? undefined,
     quantity: data.quantity,
     unit: data.unit,
     unitPrice: data.unit_price,
     totalPrice: data.total_price,
     vatRate: data.vat_rate,
-    matchedProductId: data.matched_product_id,
-    matchConfidence: data.match_confidence,
-    needsReview: data.needs_review,
-    notes: data.notes,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at
+    matchedProductId: data.matched_product_id ?? undefined,
+    matchConfidence: data.match_confidence ?? undefined,
+    needsReview: data.needs_review ?? false,
+    notes: data.notes ?? undefined,
+    createdAt: data.created_at ?? new Date().toISOString(),
+    updatedAt: data.updated_at ?? new Date().toISOString()
   };
 }
 

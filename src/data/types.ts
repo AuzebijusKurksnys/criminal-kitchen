@@ -110,6 +110,7 @@ export interface Invoice {
   processedBy?: string;
   createdAt: string;
   updatedAt: string;
+  supplierName?: string; // Computed field from join
 }
 
 export interface InvoiceLineItem {

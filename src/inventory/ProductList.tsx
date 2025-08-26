@@ -201,11 +201,11 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
       {/* Delete confirmation dialog */}
       <ConfirmDialog
         isOpen={deleteProduct !== null}
-        onClose={() => setDeleteProduct(null)}
+        onCancel={() => setDeleteProduct(null)}
         onConfirm={handleDeleteConfirm}
         title="Delete Product"
         message={`Are you sure you want to delete "${deleteProduct?.name}"? This action cannot be undone and will also delete all related supplier prices.`}
-        confirmText="Delete"
+        confirmLabel="Delete"
         variant="danger"
       />
     </>
