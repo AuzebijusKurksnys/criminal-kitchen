@@ -17,6 +17,8 @@ interface ProductListProps {
 export function ProductList({ products, onEdit, onDelete, loading = false }: ProductListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [unitFilter, setUnitFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [stockLevelFilter, setStockLevelFilter] = useState('');
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
 
@@ -29,9 +31,28 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
       
       const matchesUnit = unitFilter === '' || product.unit === unitFilter;
       
-      return matchesSearch && matchesUnit;
+      const matchesCategory = categoryFilter === '' || 
+        (categoryFilter === 'uncategorized' && !product.category) ||
+        product.category === categoryFilter;
+      
+      const matchesStockLevel = stockLevelFilter === '' || (() => {
+        switch (stockLevelFilter) {
+          case 'low':
+            return product.minStock && product.quantity <= product.minStock;
+          case 'zero':
+            return product.quantity === 0;
+          case 'in-stock':
+            return product.quantity > 0;
+          case 'overstocked':
+            return product.minStock && product.quantity > (product.minStock * 2);
+          default:
+            return true;
+        }
+      })();
+      
+      return matchesSearch && matchesUnit && matchesCategory && matchesStockLevel;
     });
-  }, [products, searchQuery, unitFilter]);
+  }, [products, searchQuery, unitFilter, categoryFilter, stockLevelFilter]);
 
   const handleDeleteClick = (product: Product) => {
     setDeleteProduct(product);
@@ -98,7 +119,27 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
     }
   };
 
-  const unitOptions = UNITS.map(unit => ({ value: unit, label: unit.toUpperCase() }));
+  const unitOptions = [
+    { value: '', label: 'All Units' },
+    ...UNITS.map(unit => ({ value: unit, label: unit.toUpperCase() }))
+  ];
+
+  const categoryOptions = useMemo(() => {
+    const categories = Array.from(new Set(products.map(p => p.category).filter(Boolean)));
+    return [
+      { value: '', label: 'All Categories' },
+      { value: 'uncategorized', label: 'Uncategorized' },
+      ...categories.map(cat => ({ value: cat!, label: cat! }))
+    ];
+  }, [products]);
+
+  const stockLevelOptions = [
+    { value: '', label: 'All Stock Levels' },
+    { value: 'zero', label: 'Out of Stock (0)' },
+    { value: 'low', label: 'Low Stock (≤ Min)' },
+    { value: 'in-stock', label: 'In Stock (> 0)' },
+    { value: 'overstocked', label: 'Overstocked (> 2x Min)' }
+  ];
 
   const columns: TableColumn<Product>[] = [
     {
@@ -224,28 +265,86 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
     <>
       <div className="space-y-4">
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <SearchInput
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Search by name, SKU, or category..."
-            />
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Search */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Search
+              </label>
+              <SearchInput
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Name, SKU, category..."
+                className="w-full"
+              />
+            </div>
+
+            {/* Unit Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Unit
+              </label>
+              <Select
+                value={unitFilter}
+                onChange={setUnitFilter}
+                options={unitOptions}
+                className="w-full"
+              />
+            </div>
+
+            {/* Category Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Category
+              </label>
+              <Select
+                value={categoryFilter}
+                onChange={setCategoryFilter}
+                options={categoryOptions}
+                className="w-full"
+              />
+            </div>
+
+            {/* Stock Level Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Stock Level
+              </label>
+              <Select
+                value={stockLevelFilter}
+                onChange={setStockLevelFilter}
+                options={stockLevelOptions}
+                className="w-full"
+              />
+            </div>
           </div>
-          <div className="w-full sm:w-48">
-            <Select
-              value={unitFilter}
-              onChange={setUnitFilter}
-              options={unitOptions}
-              placeholder="Filter by unit"
-            />
+
+          {/* Filter Summary */}
+          <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+            <span>
+              Showing {filteredProducts.length} of {products.length} products
+            </span>
+            {(searchQuery || unitFilter || categoryFilter || stockLevelFilter) && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setUnitFilter('');
+                  setCategoryFilter('');
+                  setStockLevelFilter('');
+                }}
+                className="text-blue-600 hover:text-blue-800"
+              >
+                Clear all filters
+              </button>
+            )}
           </div>
         </div>
 
         {/* Results summary and bulk actions */}
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600">
-            {searchQuery || unitFilter ? (
+            {(searchQuery || unitFilter || categoryFilter || stockLevelFilter) ? (
               <>Showing {filteredProducts.length} of {products.length} products</>
             ) : (
               <>{products.length} products total</>

@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { InventoryPage } from './pages/InventoryPage';
 import { SupplierPricesPage } from './pages/SupplierPricesPage';
+import { AllSupplierPricesPage } from './pages/AllSupplierPricesPage';
 import { InvoicesPage } from './pages/InvoicesPage';
 import { InvoiceUploadPage } from './pages/InvoiceUploadPage';
 import { InvoiceReviewPage } from './pages/InvoiceReviewPage';
@@ -15,6 +16,7 @@ export function AppRoutes() {
       <Route path="/" element={<Navigate to="/inventory" replace />} />
       <Route path="/inventory" element={<InventoryPage />} />
       <Route path="/supplier-prices" element={<SupplierPricesPage />} />
+      <Route path="/supplier-prices/all" element={<AllSupplierPricesPage />} />
       <Route path="/invoices" element={<InvoicesPage />} />
       <Route path="/invoices/upload" element={<InvoiceUploadPage />} />
       <Route path="/invoices/review" element={<InvoiceReviewPage />} />

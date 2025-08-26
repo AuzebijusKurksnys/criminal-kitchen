@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { Product, Supplier, SupplierPrice } from '../data/types';
 import type { SupplierFormData, SupplierPriceFormData } from '../utils/validators';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
@@ -23,6 +24,7 @@ import {
 type ViewMode = 'pricing' | 'suppliers' | 'create-supplier' | 'edit-supplier' | 'create-price' | 'edit-price';
 
 export function SupplierPricesPage() {
+  const navigate = useNavigate();
   const { showSuccess, showError } = useToast();
   
   // Data state
@@ -238,6 +240,12 @@ export function SupplierPricesPage() {
       case 'pricing':
         return (
           <div className="flex space-x-3">
+            <button
+              onClick={() => navigate('/supplier-prices/all')}
+              className="btn-secondary btn-md"
+            >
+              View All Prices
+            </button>
             <button
               onClick={() => setViewMode('suppliers')}
               className="btn-secondary btn-md"
