@@ -189,10 +189,32 @@ export function InvoiceReviewPage() {
           
           if (shouldCreate) {
             console.log('Creating new product...');
+            
+            // Normalize unit to valid values
+            const validUnits = ['pcs', 'kg', 'g', 'l', 'ml'];
+            let normalizedUnit = 'pcs'; // default
+            
+            if (lineItem.unit) {
+              const unitLower = lineItem.unit.toLowerCase();
+              if (validUnits.includes(unitLower)) {
+                normalizedUnit = unitLower;
+              } else if (unitLower.includes('kg')) {
+                normalizedUnit = 'kg';
+              } else if (unitLower.includes('gram') || unitLower.includes('g')) {
+                normalizedUnit = 'g';
+              } else if (unitLower.includes('liter') || unitLower.includes('l')) {
+                normalizedUnit = 'l';
+              } else if (unitLower.includes('ml') || unitLower.includes('milliliter')) {
+                normalizedUnit = 'ml';
+              }
+            }
+            
+            console.log(`Normalizing unit from "${lineItem.unit}" to "${normalizedUnit}"`);
+            
             const newProduct = await createProduct({
               sku: `AUTO-${Date.now()}-${i}`,
               name: lineItem.productName,
-              unit: lineItem.unit as any || 'pcs',
+              unit: normalizedUnit as any,
               quantity: 0,
               category: 'Auto-imported'
             });
@@ -210,13 +232,32 @@ export function InvoiceReviewPage() {
           unit: lineItem.unit || 'pcs',
           unitPrice: lineItem.unitPrice || 0
         });
+        // Normalize unit for line item too
+        const validUnits = ['pcs', 'kg', 'g', 'l', 'ml'];
+        let normalizedLineItemUnit = 'pcs'; // default
+        
+        if (lineItem.unit) {
+          const unitLower = lineItem.unit.toLowerCase();
+          if (validUnits.includes(unitLower)) {
+            normalizedLineItemUnit = unitLower;
+          } else if (unitLower.includes('kg')) {
+            normalizedLineItemUnit = 'kg';
+          } else if (unitLower.includes('gram') || unitLower.includes('g')) {
+            normalizedLineItemUnit = 'g';
+          } else if (unitLower.includes('liter') || unitLower.includes('l')) {
+            normalizedLineItemUnit = 'l';
+          } else if (unitLower.includes('ml') || unitLower.includes('milliliter')) {
+            normalizedLineItemUnit = 'ml';
+          }
+        }
+
         await createInvoiceLineItem({
           invoiceId: invoice.id,
           productId,
           productName: lineItem.productName || 'Unknown Product',
           description: lineItem.description,
           quantity: lineItem.quantity || 1,
-          unit: lineItem.unit || 'pcs',
+          unit: normalizedLineItemUnit,
           unitPrice: lineItem.unitPrice || 0,
           totalPrice: lineItem.totalPrice || 0,
           vatRate: lineItem.vatRate || 21,
