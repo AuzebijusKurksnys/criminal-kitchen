@@ -18,6 +18,7 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
   const [searchQuery, setSearchQuery] = useState('');
   const [unitFilter, setUnitFilter] = useState('');
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
 
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
@@ -43,6 +44,46 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
     }
   };
 
+  const handleSelectProduct = (productId: string) => {
+    const newSelected = new Set(selectedProducts);
+    if (newSelected.has(productId)) {
+      newSelected.delete(productId);
+    } else {
+      newSelected.add(productId);
+    }
+    setSelectedProducts(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    const filteredProductIds = filteredProducts.map(p => p.id);
+    if (selectedProducts.size === filteredProductIds.length && 
+        filteredProductIds.every(id => selectedProducts.has(id))) {
+      // All visible products are selected, so deselect all
+      setSelectedProducts(new Set());
+    } else {
+      // Select all visible products
+      setSelectedProducts(new Set(filteredProductIds));
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedProducts.size === 0) return;
+    
+    const selectedProductsArray = filteredProducts.filter(p => selectedProducts.has(p.id));
+    const confirmMessage = selectedProducts.size === 1 
+      ? `Are you sure you want to delete "${selectedProductsArray[0].name}"?`
+      : `Are you sure you want to delete ${selectedProducts.size} selected products?`;
+    
+    if (window.confirm(confirmMessage + ' This action cannot be undone and will also delete all related supplier prices.')) {
+      selectedProducts.forEach(productId => onDelete(productId));
+      setSelectedProducts(new Set());
+    }
+  };
+
+  const isAllSelected = filteredProducts.length > 0 && 
+    filteredProducts.every(product => selectedProducts.has(product.id));
+  const isPartiallySelected = selectedProducts.size > 0 && !isAllSelected;
+
   const getStockStatus = (product: Product) => {
     if (!product.minStock) return 'normal';
     return product.quantity <= product.minStock ? 'low' : 'normal';
@@ -60,6 +101,32 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
   const unitOptions = UNITS.map(unit => ({ value: unit, label: unit.toUpperCase() }));
 
   const columns: TableColumn<Product>[] = [
+    {
+      key: 'select',
+      label: (
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            checked={isAllSelected}
+            ref={input => {
+              if (input) input.indeterminate = isPartiallySelected;
+            }}
+            onChange={handleSelectAll}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+        </div>
+      ),
+      render: (_value: any, product: Product) => (
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            checked={selectedProducts.has(product.id)}
+            onChange={() => handleSelectProduct(product.id)}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+        </div>
+      ),
+    },
     {
       key: 'sku',
       label: 'SKU',
@@ -175,12 +242,28 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
           </div>
         </div>
 
-        {/* Results summary */}
-        <div className="text-sm text-gray-600">
-          {searchQuery || unitFilter ? (
-            <>Showing {filteredProducts.length} of {products.length} products</>
-          ) : (
-            <>{products.length} products total</>
+        {/* Results summary and bulk actions */}
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-gray-600">
+            {searchQuery || unitFilter ? (
+              <>Showing {filteredProducts.length} of {products.length} products</>
+            ) : (
+              <>{products.length} products total</>
+            )}
+            {selectedProducts.size > 0 && (
+              <span className="ml-2 text-blue-600 font-medium">
+                ({selectedProducts.size} selected)
+              </span>
+            )}
+          </div>
+          
+          {selectedProducts.size > 0 && (
+            <button
+              onClick={handleDeleteSelected}
+              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            >
+              🗑️ Delete Selected ({selectedProducts.size})
+            </button>
           )}
         </div>
 
