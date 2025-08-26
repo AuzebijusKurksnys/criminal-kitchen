@@ -202,7 +202,14 @@ export function InvoiceReviewPage() {
         }
 
         // Create line item
-        console.log('Creating line item...');
+        console.log('Creating line item...', {
+          invoiceId: invoice.id,
+          productId,
+          productName: lineItem.productName || 'Unknown Product',
+          quantity: lineItem.quantity || 1,
+          unit: lineItem.unit || 'pcs',
+          unitPrice: lineItem.unitPrice || 0
+        });
         await createInvoiceLineItem({
           invoiceId: invoice.id,
           productId,

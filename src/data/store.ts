@@ -87,7 +87,10 @@ export async function createProduct(product: Omit<Product, 'id'>): Promise<Produ
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error creating product:', error);
+      throw new Error(`Failed to create product: ${error.message}`);
+    }
     
     return {
       id: data.id,
@@ -382,7 +385,10 @@ export async function createSupplierPrice(supplierPrice: Omit<SupplierPrice, 'id
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error creating supplier price:', error);
+      throw new Error(`Failed to create supplier price: ${error.message}`);
+    }
     
     return {
       id: data.id,
@@ -928,23 +934,26 @@ export async function createInvoiceLineItem(lineItem: Omit<InvoiceLineItem, 'id'
     .from('invoice_line_items')
     .insert({
       invoice_id: lineItem.invoiceId,
-      product_id: lineItem.productId,
+      product_id: lineItem.productId || null,
       product_name: lineItem.productName,
-      description: lineItem.description,
+      description: lineItem.description || null,
       quantity: lineItem.quantity,
       unit: lineItem.unit,
       unit_price: lineItem.unitPrice,
       total_price: lineItem.totalPrice,
-      vat_rate: lineItem.vatRate,
-      matched_product_id: lineItem.matchedProductId,
-      match_confidence: lineItem.matchConfidence,
-      needs_review: lineItem.needsReview,
-      notes: lineItem.notes
+      vat_rate: lineItem.vatRate || 21,
+      matched_product_id: lineItem.matchedProductId || null,
+      match_confidence: lineItem.matchConfidence || null,
+      needs_review: lineItem.needsReview || false,
+      notes: lineItem.notes || null
     })
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('Supabase error creating invoice line item:', error);
+    throw new Error(`Failed to create invoice line item: ${error.message}`);
+  }
   
   return {
     id: data.id,
