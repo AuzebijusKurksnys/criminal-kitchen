@@ -127,23 +127,23 @@ export function InvoicesPage() {
     {
       key: 'invoiceDate',
       label: 'Date',
-      render: (invoice: Invoice) => new Date(invoice.invoiceDate).toLocaleDateString()
+      render: (invoice: Invoice) => invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString() : '-'
     },
     {
       key: 'totalInclVat',
       label: 'Total (incl. VAT)',
-      render: (invoice: Invoice) => formatPrice(invoice.totalInclVat, invoice.currency)
+      render: (invoice: Invoice) => formatPrice(invoice.totalInclVat || 0, invoice.currency || 'EUR')
     },
     {
       key: 'totalExclVat',
       label: 'Total (excl. VAT)',
-      render: (invoice: Invoice) => formatPrice(invoice.totalExclVat, invoice.currency)
+      render: (invoice: Invoice) => formatPrice(invoice.totalExclVat || 0, invoice.currency || 'EUR')
     },
     {
       key: 'discountAmount',
       label: 'Discount',
       render: (invoice: Invoice) => 
-        invoice.discountAmount > 0 ? formatPrice(invoice.discountAmount, invoice.currency) : '-'
+        (invoice.discountAmount || 0) > 0 ? formatPrice(invoice.discountAmount || 0, invoice.currency || 'EUR') : '-'
     },
     {
       key: 'status',
@@ -241,7 +241,7 @@ export function InvoicesPage() {
           const count = invoices.filter(inv => inv.status === status).length;
           const total = invoices
             .filter(inv => inv.status === status)
-            .reduce((sum, inv) => sum + inv.totalInclVat, 0);
+            .reduce((sum, inv) => sum + (inv.totalInclVat || 0), 0);
           
           return (
             <div key={status} className="bg-white p-4 rounded-lg shadow-sm border">
