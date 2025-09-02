@@ -18,6 +18,10 @@ export function InvoiceUploadPage() {
     setSelectedFile(null);
   };
 
+  const handleBatchUpload = () => {
+    navigate('/invoices/batch-upload');
+  };
+
   const handleProcessInvoice = async () => {
     if (!selectedFile) {
       showToast('error', 'Please select a file first');
@@ -59,6 +63,21 @@ export function InvoiceUploadPage() {
         <p className="mt-2 text-gray-600">
           Upload your supplier invoice to automatically extract product information and update inventory.
         </p>
+        
+        {/* Upload Mode Selector */}
+        <div className="mt-6 flex justify-center">
+          <div className="bg-white rounded-lg p-1 border border-gray-200 inline-flex">
+            <button className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md">
+              Single Invoice
+            </button>
+            <button 
+              onClick={handleBatchUpload}
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md"
+            >
+              Batch Upload
+            </button>
+          </div>
+        </div>
       </div>
 
       {!isOpenAIInitialized() && (

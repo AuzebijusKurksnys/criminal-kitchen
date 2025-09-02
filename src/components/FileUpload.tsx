@@ -1,17 +1,23 @@
 import { useState, useRef, DragEvent, ChangeEvent } from 'react';
 
 interface FileUploadProps {
-  onFileSelect: (file: File) => void;
+  onFileSelect?: (file: File) => void;
+  onMultipleFileSelect?: (files: File[]) => void;
   accept?: string;
   maxSize?: number;
   className?: string;
+  multiple?: boolean;
+  maxFiles?: number;
 }
 
 export function FileUpload({ 
   onFileSelect, 
+  onMultipleFileSelect,
   accept = '.pdf,.jpg,.jpeg,.png,.heic', 
   maxSize = 10 * 1024 * 1024, // 10MB
-  className = ''
+  className = '',
+  multiple = false,
+  maxFiles = 10
 }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +50,36 @@ export function FileUpload({
 
   const handleFile = (file: File) => {
     if (validateFile(file)) {
-      onFileSelect(file);
+      if (onFileSelect) {
+        onFileSelect(file);
+      }
+    }
+  };
+
+  const handleMultipleFiles = (files: File[]) => {
+    if (files.length > maxFiles) {
+      setError(`Maximum ${maxFiles} files allowed. Selected ${files.length} files.`);
+      return;
+    }
+
+    const validFiles: File[] = [];
+    const errors: string[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (validateFile(file)) {
+        validFiles.push(file);
+      } else {
+        errors.push(`${file.name}: Invalid file`);
+      }
+    }
+
+    if (errors.length > 0) {
+      setError(`Some files were rejected: ${errors.slice(0, 3).join(', ')}${errors.length > 3 ? ` and ${errors.length - 3} more` : ''}`);
+    }
+
+    if (validFiles.length > 0 && onMultipleFileSelect) {
+      onMultipleFileSelect(validFiles);
     }
   };
 
@@ -64,14 +99,22 @@ export function FileUpload({
 
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-      handleFile(files[0]);
+      if (multiple && files.length > 1) {
+        handleMultipleFiles(files);
+      } else {
+        handleFile(files[0]);
+      }
     }
   };
 
   const handleFileInput = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      handleFile(files[0]);
+      if (multiple && files.length > 1) {
+        handleMultipleFiles(Array.from(files));
+      } else {
+        handleFile(files[0]);
+      }
     }
     // Reset input
     e.target.value = '';
@@ -108,10 +151,11 @@ export function FileUpload({
           
           <div>
             <p className="text-lg font-medium text-gray-900">
-              Drop your invoice here or click to upload
+              {multiple ? 'Drop invoices here or click to upload' : 'Drop your invoice here or click to upload'}
             </p>
             <p className="text-sm text-gray-500 mt-1">
               Supports PDF, JPG, PNG, HEIC up to {Math.round(maxSize / 1024 / 1024)}MB
+              {multiple ? ` • Max ${maxFiles} files` : ''}
             </p>
           </div>
 
@@ -152,6 +196,7 @@ export function FileUpload({
         ref={fileInputRef}
         type="file"
         accept={accept}
+        multiple={multiple}
         onChange={handleFileInput}
         className="hidden"
       />
@@ -168,13 +213,65 @@ export function FileUpload({
   );
 }
 
+// Multiple File preview component
+interface MultipleFilePreviewProps {
+  files: File[];
+  onRemove: (index: number) => void;
+  onRemoveAll: () => void;
+}
+
+export function MultipleFilePreview({ files, onRemove, onRemoveAll }: MultipleFilePreviewProps) {
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const totalSize = files.reduce((acc, file) => acc + file.size, 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium text-gray-900">
+          Selected Files ({files.length})
+        </h3>
+        <div className="flex items-center space-x-4">
+          <span className="text-sm text-gray-500">
+            Total: {formatFileSize(totalSize)}
+          </span>
+          <button
+            onClick={onRemoveAll}
+            className="text-red-600 hover:text-red-800 text-sm font-medium"
+          >
+            Remove All
+          </button>
+        </div>
+      </div>
+      
+      <div className="grid gap-3 max-h-96 overflow-y-auto">
+        {files.map((file, index) => (
+          <FilePreview
+            key={`${file.name}-${index}`}
+            file={file}
+            onRemove={() => onRemove(index)}
+            showIndex={index + 1}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // File preview component
 interface FilePreviewProps {
   file: File;
   onRemove: () => void;
+  showIndex?: number;
 }
 
-export function FilePreview({ file, onRemove }: FilePreviewProps) {
+export function FilePreview({ file, onRemove, showIndex }: FilePreviewProps) {
   const [preview, setPreview] = useState<string | null>(null);
 
   useState(() => {
@@ -198,6 +295,12 @@ export function FilePreview({ file, onRemove }: FilePreviewProps) {
   return (
     <div className="border rounded-lg p-4 bg-gray-50">
       <div className="flex items-start space-x-4">
+        {showIndex && (
+          <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+            <span className="text-sm font-medium text-blue-700">{showIndex}</span>
+          </div>
+        )}
+        
         {preview ? (
           <img 
             src={preview} 

@@ -42,7 +42,7 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
     const mimeType = file.type;
 
     const prompt = `
-You are an expert invoice OCR specialist. Analyze this invoice image with EXTREME PRECISION and extract ALL data.
+You are an expert invoice OCR specialist with advanced text recognition capabilities. Analyze this invoice image with EXTREME PRECISION and extract ALL data.
 
 REQUIRED JSON STRUCTURE:
 {
@@ -72,32 +72,67 @@ REQUIRED JSON STRUCTURE:
 }
 
 CRITICAL EXTRACTION RULES:
-1. READ EVERY LINE: Scan the entire invoice systematically - header, body, footer
-2. EXACT TRANSCRIPTION: Copy text exactly as written, including special characters
-3. NUMBERS ONLY: Remove €, $, currencies, commas - convert to pure numbers
-4. DATE FORMAT: Always convert dates to YYYY-MM-DD (e.g., 2025-01-15)
-5. UNITS: Extract exact units as written (kg, vnt, l, ml, etc.)
-6. VAT CALCULATION: If VAT % not shown, calculate from totals or use 21%
-7. LINE ITEMS: Include EVERY product/service line - even with partial data
-8. ZERO VALUES: Use 0 for missing discounts, empty fields
-9. LITHUANIAN TEXT: Handle Lithuanian invoices (PVM=VAT, Data=Date, etc.)
-10. TABLE STRUCTURE: Look for itemized tables with products, quantities, prices
+1. SYSTEMATIC SCANNING: Start from top-left, read systematically across and down the entire document
+2. PDF TEXT EXTRACTION: If this is a PDF, focus on text layers first, then visual elements
+3. HANDLE POOR QUALITY: For blurry/low-quality images, apply advanced OCR techniques:
+   - Look for patterns in tables and structured data
+   - Cross-reference numbers for consistency
+   - Use context clues from surrounding text
+4. EXACT TRANSCRIPTION: Copy text exactly as written, preserve special characters and accents
+5. NUMBER PARSING: Remove €, $, currencies, commas, spaces - convert to pure decimal numbers
+6. DATE FORMATS: Convert all date formats to YYYY-MM-DD:
+   - DD/MM/YYYY → YYYY-MM-DD
+   - DD.MM.YYYY → YYYY-MM-DD
+   - YYYY-MM-DD (keep as is)
+7. UNITS STANDARDIZATION: Extract exact units, handle common variations:
+   - vnt./pcs./pc./piece → pcs
+   - kg/kilogram → kg
+   - l/liter/litre → l
+   - ml/milliliter → ml
+8. VAT HANDLING: Calculate VAT if not explicitly shown, common rates: 0%, 5%, 9%, 21%
+9. MULTI-LANGUAGE SUPPORT:
+   - Lithuanian: PVM=VAT, Data=Date, Suma=Total, Kiekis=Quantity
+   - English: VAT, Date, Total, Quantity
+   - Handle mixed language invoices
+10. TABLE EXTRACTION: Identify and parse tabular data:
+    - Product/service descriptions
+    - Quantities and units
+    - Unit prices and total prices
+    - VAT rates per line item
 
-QUALITY CHECKS:
-- Verify line items sum matches invoice total (±0.01 tolerance)
-- Ensure dates are logical (not future dates unless legitimate)
-- Confirm VAT calculations make sense
-- Double-check all numeric values are properly extracted
+ADVANCED OCR TECHNIQUES FOR POOR QUALITY:
+- For blurred numbers: Look for digit patterns and context
+- For skewed text: Apply perspective correction mentally
+- For faded text: Use surrounding context to infer missing characters
+- For overlapping text: Separate overlaid elements
+- For handwritten annotations: Focus on printed text, ignore handwriting unless it's the main content
 
-Extract EVERYTHING visible. If text is unclear, make best effort but be accurate.
+QUALITY ASSURANCE:
+- Mathematical validation: Line items must sum to invoice totals (±0.02 tolerance for rounding)
+- Date validation: Ensure dates are realistic (not in future, not before 1990)
+- VAT consistency: Check if VAT calculations are correct across line items
+- Currency consistency: All amounts should use the same currency
+- Completeness check: Ensure no line items are missed from tables
+
+ERROR HANDLING:
+- If text is completely unreadable, mark field as null but continue extraction
+- If numbers are unclear, provide best estimate with context
+- If structure is unclear, follow the most logical interpretation
+- Always extract maximum possible data even if some fields are incomplete
+
+Extract EVERYTHING visible with maximum accuracy. Quality over speed - take time to analyze each section thoroughly.
 `;
 
+    const isPDF = mimeType === 'application/pdf';
+    
     const response = await openaiClient.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: "You are a highly accurate invoice data extraction specialist. You MUST extract every piece of information from invoices with 100% accuracy. Return only valid JSON."
+          content: `You are a highly accurate invoice data extraction specialist. You MUST extract every piece of information from invoices with 100% accuracy. Return only valid JSON.
+          
+          ${isPDF ? 'SPECIAL INSTRUCTIONS FOR PDF: This is a PDF file rendered as an image. PDF invoices often have very clean text and structured layouts. Pay extra attention to text layers, table structures, and precise number formatting. PDFs typically have higher text quality than photos.' : 'SPECIAL INSTRUCTIONS FOR IMAGE: This appears to be a photo or image scan. Apply advanced OCR techniques for potentially unclear text, lighting variations, and perspective distortion.'}`
         },
         {
           role: "user",
