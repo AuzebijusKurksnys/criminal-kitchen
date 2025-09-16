@@ -31,6 +31,36 @@ async function fileToBase64(file: File): Promise<string> {
   });
 }
 
+// Normalize and sanitize product names extracted from OCR to reduce noise
+function sanitizeProductName(rawName: string | undefined | null): string {
+  if (!rawName) return '';
+  let name = String(rawName)
+    .replace(/\s+/g, ' ') // collapse whitespace
+    .replace(/[\u00AD\u200B\u200C\u200D]/g, '') // soft hyphens/zero-width
+    .trim();
+  // Remove SKU-like trailing codes and parentheses-only tails
+  name = name.replace(/\s*[#(\[]?[A-Z0-9_-]{4,}[)\]]?\s*$/i, '').trim();
+  // If name is mostly digits/symbols, consider it unknown
+  const alnum = name.replace(/[^\p{L}\p{N}]/gu, '');
+  const digits = name.replace(/[^0-9]/g, '');
+  if (!alnum || (digits.length > 0 && digits.length / Math.max(1, alnum.length) > 0.6)) {
+    return '';
+  }
+  return name;
+}
+
+// Parse numbers robustly (handle commas and currency symbols)
+function parseNumber(value: any): number {
+  if (typeof value === 'number') return value;
+  if (value == null) return 0;
+  const cleaned = String(value)
+    .replace(/[^0-9,.-]/g, '')
+    .replace(/,(?=\d{3}(\D|$))/g, '') // remove thousand separators
+    .replace(',', '.'); // decimal comma to dot
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
+}
+
 // Extract invoice data using OpenAI Vision API
 export async function extractInvoiceData(file: File): Promise<InvoiceProcessingResult> {
   if (!openaiClient) {
@@ -188,12 +218,12 @@ Extract EVERYTHING visible with maximum accuracy. Quality over speed - take time
     // Validate and transform the extracted data
     const result: InvoiceProcessingResult = {
       invoice: {
-        invoiceNumber: extractedData.invoice?.invoiceNumber || `INV-${Date.now()}`,
+        invoiceNumber: sanitizeProductName(extractedData.invoice?.invoiceNumber) || `INV-${Date.now()}`,
         invoiceDate: extractedData.invoice?.invoiceDate || new Date().toISOString().split('T')[0],
-        totalExclVat: parseFloat(extractedData.invoice?.totalExclVat) || 0,
-        totalInclVat: parseFloat(extractedData.invoice?.totalInclVat) || 0,
-        vatAmount: parseFloat(extractedData.invoice?.vatAmount) || 0,
-        discountAmount: parseFloat(extractedData.invoice?.discountAmount) || 0,
+        totalExclVat: parseNumber(extractedData.invoice?.totalExclVat) || 0,
+        totalInclVat: parseNumber(extractedData.invoice?.totalInclVat) || 0,
+        vatAmount: parseNumber(extractedData.invoice?.vatAmount) || 0,
+        discountAmount: parseNumber(extractedData.invoice?.discountAmount) || 0,
         currency: extractedData.invoice?.currency || 'EUR',
         status: 'review' as const,
         fileName: file.name,
@@ -203,18 +233,21 @@ Extract EVERYTHING visible with maximum accuracy. Quality over speed - take time
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       },
-      lineItems: (extractedData.lineItems || []).map((item: any, index: number) => ({
-        productName: item.productName || `Product ${index + 1}`,
-        description: item.description || '',
-        quantity: parseFloat(item.quantity) || 1,
-        unit: item.unit || 'pcs',
-        unitPrice: parseFloat(item.unitPrice) || 0,
-        totalPrice: parseFloat(item.totalPrice) || 0,
-        vatRate: parseFloat(item.vatRate) || 21,
-        needsReview: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      })),
+      lineItems: (extractedData.lineItems || []).map((item: any, index: number) => {
+        const sanitizedName = sanitizeProductName(item.productName);
+        return {
+          productName: sanitizedName || `Product ${index + 1}`,
+          description: item.description || '',
+          quantity: parseNumber(item.quantity) || 1,
+          unit: item.unit || 'pcs',
+          unitPrice: parseNumber(item.unitPrice) || 0,
+          totalPrice: parseNumber(item.totalPrice) || 0,
+          vatRate: parseNumber(item.vatRate) || 21,
+          needsReview: !sanitizedName,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+      }),
       matches: {},
       errors: [],
       warnings: []
@@ -277,59 +310,52 @@ export async function findProductMatches(lineItems: Partial<InvoiceLineItem>[]):
 
 // Simple fuzzy matching algorithm
 function findSimilarProducts(searchName: string, products: Product[]): ProductMatch[] {
+  const normalize = (s: string) => s
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ') // remove punctuation
+    .replace(/\b(kg|g|l|ml|pcs|piece|pc|vnt|pack|unit|units)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const stripNumbers = (s: string) => s.replace(/[0-9]/g, '').replace(/\s+/g, ' ').trim();
+
+  const searchNorm = normalize(searchName);
+  const searchNoNum = stripNumbers(searchNorm);
+  const searchTokens = new Set(searchNoNum.split(' ').filter(Boolean));
+
   const matches: ProductMatch[] = [];
-  const searchLower = searchName.toLowerCase().trim();
 
   for (const product of products) {
-    const productNameLower = product.name.toLowerCase().trim();
-    const skuLower = product.sku.toLowerCase().trim();
+    const nameNorm = normalize(product.name);
+    const skuNorm = normalize(product.sku);
+    const nameNoNum = stripNumbers(nameNorm);
+    const nameTokens = new Set(nameNoNum.split(' ').filter(Boolean));
 
     let confidence = 0;
     let reason = '';
 
-    // Exact match
-    if (productNameLower === searchLower || skuLower === searchLower) {
+    if (nameNorm === searchNorm || skuNorm === searchNorm) {
       confidence = 1.0;
       reason = 'Exact match';
-    }
-    // Starts with
-    else if (productNameLower.startsWith(searchLower) || searchLower.startsWith(productNameLower)) {
-      confidence = 0.9;
-      reason = 'Name starts with match';
-    }
-    // Contains
-    else if (productNameLower.includes(searchLower) || searchLower.includes(productNameLower)) {
-      confidence = 0.8;
-      reason = 'Name contains match';
-    }
-    // Word overlap
-    else {
-      const searchWords = searchLower.split(/\s+/);
-      const productWords = productNameLower.split(/\s+/);
-      const commonWords = searchWords.filter(word => 
-        productWords.some(pWord => pWord.includes(word) || word.includes(pWord))
-      );
-      
-      if (commonWords.length > 0) {
-        confidence = (commonWords.length / Math.max(searchWords.length, productWords.length)) * 0.7;
-        reason = `${commonWords.length} word(s) match`;
-      }
+    } else {
+      // Token Jaccard similarity
+      const intersectionSize = [...searchTokens].filter(t => nameTokens.has(t)).length;
+      const unionSize = new Set([...searchTokens, ...nameTokens]).size || 1;
+      const jaccard = intersectionSize / unionSize;
+
+      // Prefix boost if one starts with the other
+      const prefixBoost = nameNoNum.startsWith(searchNoNum) || searchNoNum.startsWith(nameNoNum) ? 0.2 : 0;
+
+      confidence = Math.min(1, jaccard + prefixBoost);
+      reason = `Token similarity ${(jaccard * 100).toFixed(0)}%` + (prefixBoost ? ' + prefix' : '');
     }
 
-    if (confidence > 0.5) {
-      matches.push({
-        productId: product.id,
-        product,
-        confidence,
-        reason
-      });
+    if (confidence >= 0.7) {
+      matches.push({ productId: product.id, product, confidence, reason });
     }
   }
 
-  // Sort by confidence descending, limit to top 3
-  return matches
-    .sort((a, b) => b.confidence - a.confidence)
-    .slice(0, 3);
+  return matches.sort((a, b) => b.confidence - a.confidence).slice(0, 3);
 }
 
 

@@ -196,13 +196,19 @@ export function InvoiceReviewPage() {
         
         let productId = selectedProductId;
         
-        // Create new product if none selected and user wants to
+        // Create new product only if explicitly chosen (no auto-pop up)
         if (!productId && lineItem.productName) {
-          const shouldCreate = window.confirm(
-            `Product "${lineItem.productName}" not found. Create new product?`
-          );
-          
-          if (shouldCreate) {
+          const shouldCreate = selectedMatches[i] === undefined || selectedMatches[i] === '';
+          if (!shouldCreate) {
+            // User selected a match; skip creation
+          } else {
+            const confirmed = window.confirm(
+              `No match selected for "${lineItem.productName}". Create new product?`
+            );
+            if (!confirmed) {
+              // Mark as needs review and continue without creating
+              continue;
+            }
             console.log('Creating new product...');
             
             // Normalize unit to valid values
