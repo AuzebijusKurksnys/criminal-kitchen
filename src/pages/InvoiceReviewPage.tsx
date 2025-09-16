@@ -297,6 +297,14 @@ export function InvoiceReviewPage() {
           }
         }
 
+        // If we matched an existing product, force unit to that product's unit to keep consistency
+        if (productId) {
+          const existing = products.find(p => p.id === productId);
+          if (existing) {
+            normalizedLineItemUnit = existing.unit as any;
+          }
+        }
+
         await createInvoiceLineItem({
           invoiceId: invoice.id,
           productId,
