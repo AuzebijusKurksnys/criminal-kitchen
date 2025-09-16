@@ -72,7 +72,9 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
     const mimeType = file.type;
 
     const prompt = `
-You are an expert invoice OCR specialist with advanced text recognition capabilities. Analyze this invoice image with EXTREME PRECISION and extract ALL data.
+You are an expert invoice OCR specialist with advanced text recognition capabilities. Analyze this invoice image with EXTREME PRECISION and extract ALL data. 
+
+CRITICAL: This may be a low-quality smartphone photo with poor lighting, blur, or perspective distortion. Apply maximum OCR analysis effort.
 
 REQUIRED JSON STRUCTURE:
 {
@@ -178,8 +180,8 @@ Extract EVERYTHING visible with maximum accuracy. Quality over speed - take time
           ]
         }
       ],
-      max_tokens: 4000, // Increased for complex invoices
-      temperature: 0, // Zero temperature for maximum consistency
+      max_tokens: 6000, // Increased for very complex invoices
+      temperature: 0.1, // Slight creativity for better interpretation
       response_format: { type: "json_object" } // Ensure JSON response
     });
 
