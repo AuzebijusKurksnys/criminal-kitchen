@@ -10,6 +10,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { TechCardsPage } from './pages/TechCardsPage';
 import { JournalsPage } from './pages/JournalsPage';
 import { ReportsPage } from './pages/ReportsPage';
+import { AdminMergeDippers } from './pages/AdminMergeDippers';
 
 export function AppRoutes() {
   return (
@@ -26,6 +27,7 @@ export function AppRoutes() {
       <Route path="/tech-cards" element={<TechCardsPage />} />
       <Route path="/journals" element={<JournalsPage />} />
       <Route path="/reports" element={<ReportsPage />} />
+      <Route path="/admin/merge-dippers" element={<AdminMergeDippers />} />
     </Routes>
   );
 }
