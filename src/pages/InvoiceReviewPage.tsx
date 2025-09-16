@@ -195,6 +195,24 @@ export function InvoiceReviewPage() {
         console.log(`Processing line item ${i + 1}:`, lineItem);
         
         let productId = selectedProductId;
+        let canonicalProductName: string | undefined = undefined;
+
+        // If no explicit selection, auto-link to top high-confidence match
+        if (!productId && productMatches[i] && productMatches[i][0] && productMatches[i][0].confidence >= 0.85) {
+          productId = productMatches[i][0].productId;
+        }
+
+        // If we have a productId, prefer the exact inventory product name to keep names consistent
+        if (productId) {
+          try {
+            const matched = await getProduct(productId);
+            if (matched) {
+              canonicalProductName = matched.name;
+            }
+          } catch (e) {
+            console.warn('Could not load matched product for canonical name', e);
+          }
+        }
         
         // Create new product only if explicitly chosen (no auto-pop up)
         if (!productId && lineItem.productName) {
@@ -255,7 +273,7 @@ export function InvoiceReviewPage() {
         console.log('Creating line item...', {
           invoiceId: invoice.id,
           productId,
-          productName: lineItem.productName || 'Unknown Product',
+          productName: canonicalProductName || lineItem.productName || 'Unknown Product',
           quantity: lineItem.quantity || 1,
           unit: lineItem.unit || 'pcs',
           unitPrice: lineItem.unitPrice || 0
@@ -282,7 +300,7 @@ export function InvoiceReviewPage() {
         await createInvoiceLineItem({
           invoiceId: invoice.id,
           productId,
-          productName: lineItem.productName || 'Unknown Product',
+          productName: canonicalProductName || lineItem.productName || 'Unknown Product',
           description: lineItem.description,
           quantity: lineItem.quantity || 1,
           unit: normalizedLineItemUnit,
