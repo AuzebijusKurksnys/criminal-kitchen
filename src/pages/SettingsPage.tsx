@@ -3,7 +3,6 @@ import { showToast } from '../components/Toast';
 import { initializeOpenAI, isOpenAIInitialized } from '../services/invoiceParser';
 
 interface SettingsData {
-  openaiApiKey: string;
   autoProcessInvoices: boolean;
   defaultVatRate: number;
   invoiceNotifications: boolean;
@@ -11,14 +10,11 @@ interface SettingsData {
 
 export function SettingsPage() {
   const [settings, setSettings] = useState<SettingsData>({
-    openaiApiKey: '',
     autoProcessInvoices: false,
     defaultVatRate: 21,
     invoiceNotifications: true
   });
-  const [showApiKey, setShowApiKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isTestingConnection, setIsTestingConnection] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -31,10 +27,7 @@ export function SettingsPage() {
         const parsed = JSON.parse(stored);
         setSettings(prev => ({ ...prev, ...parsed }));
         
-        // Initialize OpenAI if key exists
-        if (parsed.openaiApiKey) {
-          initializeOpenAI(parsed.openaiApiKey);
-        }
+        // OpenAI now uses environment variables
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -48,10 +41,7 @@ export function SettingsPage() {
       // Save to localStorage
       localStorage.setItem('criminal-kitchen-settings', JSON.stringify(settings));
       
-      // Initialize OpenAI with new key
-      if (settings.openaiApiKey) {
-        initializeOpenAI(settings.openaiApiKey);
-      }
+      // OpenAI now uses environment variables - no initialization needed
       
       showToast('success', 'Settings saved successfully');
     } catch (error) {
@@ -62,40 +52,6 @@ export function SettingsPage() {
     }
   };
 
-  const testOpenAIConnection = async () => {
-    if (!settings.openaiApiKey) {
-      showToast('error', 'Please enter an OpenAI API key first');
-      return;
-    }
-
-    setIsTestingConnection(true);
-    
-    try {
-      // Initialize with the key
-      initializeOpenAI(settings.openaiApiKey);
-      
-      // Test with a simple request
-      const response = await fetch('https://api.openai.com/v1/models', {
-        headers: {
-          'Authorization': `Bearer ${settings.openaiApiKey}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        showToast('success', 'OpenAI connection successful!');
-      } else {
-        const error = await response.text();
-        showToast('error', `OpenAI connection failed: ${response.status}`);
-        console.error('OpenAI test error:', error);
-      }
-    } catch (error) {
-      console.error('Error testing OpenAI connection:', error);
-      showToast('error', 'Failed to test OpenAI connection');
-    } finally {
-      setIsTestingConnection(false);
-    }
-  };
 
   const handleInputChange = (field: keyof SettingsData, value: any) => {
     setSettings(prev => ({
@@ -119,70 +75,26 @@ export function SettingsPage() {
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-lg font-medium text-gray-900">OpenAI Configuration</h2>
             <p className="mt-1 text-sm text-gray-500">
-              Configure AI-powered invoice processing
+              AI-powered invoice processing status
             </p>
           </div>
           
           <div className="p-6 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                OpenAI API Key
-              </label>
-              <div className="flex space-x-2">
-                <div className="flex-1 relative">
-                  <input
-                    type={showApiKey ? 'text' : 'password'}
-                    value={settings.openaiApiKey}
-                    onChange={(e) => handleInputChange('openaiApiKey', e.target.value)}
-                    placeholder="sk-..."
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowApiKey(!showApiKey)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    <span className="text-gray-400 hover:text-gray-600">
-                      {showApiKey ? '🙈' : '👁️'}
-                    </span>
-                  </button>
-                </div>
-                
-                <button
-                  onClick={testOpenAIConnection}
-                  disabled={isTestingConnection || !settings.openaiApiKey}
-                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isTestingConnection ? (
-                    <>
-                      <span className="animate-spin inline-block mr-2">⟳</span>
-                      Testing...
-                    </>
-                  ) : (
-                    'Test Connection'
-                  )}
-                </button>
+            {isOpenAIInitialized() ? (
+              <div className="flex items-center text-sm text-green-600">
+                <span className="mr-2">✅</span>
+                OpenAI API key configured via environment variables
               </div>
-              
-              <p className="mt-2 text-sm text-gray-500">
-                Your OpenAI API key is stored locally and used for invoice data extraction. 
-                Get your key from{' '}
-                <a 
-                  href="https://platform.openai.com/api-keys" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-500"
-                >
-                  OpenAI Platform
-                </a>
-              </p>
-              
-              {isOpenAIInitialized() && (
-                <div className="mt-2 flex items-center text-sm text-green-600">
-                  <span className="mr-2">✅</span>
-                  OpenAI is configured and ready
-                </div>
-              )}
+            ) : (
+              <div className="flex items-center text-sm text-red-600">
+                <span className="mr-2">❌</span>
+                OpenAI API key not found in environment variables
+              </div>
+            )}
+            
+            <div className="text-sm text-gray-500">
+              <p>OpenAI API key is now configured via Vercel environment variables for security.</p>
+              <p>Set VITE_OPENAI_API_KEY in your deployment environment.</p>
             </div>
 
             <div className="flex items-center">
