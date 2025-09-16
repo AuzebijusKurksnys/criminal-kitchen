@@ -1,10 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
 
-const supabaseUrl = 'https://ldzfsbslppmmzfydwhwg.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkemZzYnNscHBtbXpmeWR3aHdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxMjgxNjIsImV4cCI6MjA3MTcwNDE2Mn0.iLHocrhu9h0QzNzkz5gfGBKQP36DgtVu0S3Wknz6lu8';
+// Read from Vite env vars; configure in Vercel/Dev: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+if (!supabaseUrl || !supabaseAnonKey) {
+  // eslint-disable-next-line no-console
+  console.error('Supabase env vars missing. Define VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+}
+
+export const supabase = createClient<Database>(supabaseUrl || '', supabaseAnonKey || '');
 
 // Helper function to handle Supabase errors
 export function handleSupabaseError(error: any, operation: string) {

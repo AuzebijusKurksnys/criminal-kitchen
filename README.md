@@ -23,6 +23,15 @@ npm run lint
 
 The application will be available at `http://localhost:5173`
 
+## Environment
+
+Set Supabase credentials via Vite env vars (Vercel → Project Settings → Environment Variables):
+
+```
+VITE_SUPABASE_URL=your-url
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
+
 ## Tech Overview
 
 ### Core Technologies
