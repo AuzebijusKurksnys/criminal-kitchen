@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import type { InvoiceLineItem, InvoiceProcessingResult, Product, ProductMatch } from '../data/types';
 import { listProducts } from '../data/store';
+import { createAzureDocumentIntelligenceService, isAzureDocumentIntelligenceAvailable } from './azureDocumentIntelligence';
 
 // OpenAI client - uses server-side API key from Vercel env vars
 const openaiClient = new OpenAI({
@@ -62,11 +63,30 @@ function parseNumber(value: any): number {
   return isNaN(num) ? 0 : num;
 }
 
-// Extract invoice data using OpenAI Vision API
+// Extract invoice data using the best available OCR service
 export async function extractInvoiceData(file: File): Promise<InvoiceProcessingResult> {
-  if (!import.meta.env.VITE_OPENAI_API_KEY) {
-    throw new Error('OpenAI API key not configured in environment variables.');
+  // Try Azure Document Intelligence first (better for invoices)
+  if (isAzureDocumentIntelligenceAvailable()) {
+    console.log('Using Azure Document Intelligence for OCR');
+    try {
+      const azureService = createAzureDocumentIntelligenceService();
+      if (azureService) {
+        const result = await azureService.analyzeInvoice(file);
+        // Find product matches after extraction
+        result.matches = await findProductMatches(result.lineItems);
+        return result;
+      }
+    } catch (error) {
+      console.error('Azure Document Intelligence failed, falling back to OpenAI:', error);
+    }
   }
+
+  // Fallback to OpenAI Vision API
+  if (!import.meta.env.VITE_OPENAI_API_KEY) {
+    throw new Error('No OCR service configured. Please set VITE_OPENAI_API_KEY or VITE_AZURE_DOCUMENT_INTELLIGENCE_* environment variables.');
+  }
+
+  console.log('Using OpenAI GPT-4o for OCR');
 
   try {
     const base64Image = await fileToBase64(file);

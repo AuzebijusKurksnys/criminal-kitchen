@@ -28,9 +28,14 @@ The application will be available at `http://localhost:5173`
 Set required env vars in Vercel → Project Settings → Environment Variables:
 
 ```
+# Database
 VITE_SUPABASE_URL=your-supabase-url
 VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+
+# OCR Services (choose one or both for fallback)
 VITE_OPENAI_API_KEY=your-openai-api-key
+VITE_AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT=your-azure-endpoint
+VITE_AZURE_DOCUMENT_INTELLIGENCE_KEY=your-azure-key
 ```
 
 ## Tech Overview
