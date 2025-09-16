@@ -2,18 +2,19 @@ import OpenAI from 'openai';
 import type { InvoiceLineItem, InvoiceProcessingResult, Product, ProductMatch } from '../data/types';
 import { listProducts } from '../data/store';
 
-// OpenAI client - will be initialized with user's API key
-let openaiClient: OpenAI | null = null;
+// OpenAI client - uses server-side API key from Vercel env vars
+const openaiClient = new OpenAI({
+  apiKey: import.meta.env.VITE_OPENAI_API_KEY || '',
+  dangerouslyAllowBrowser: true // Server env var but accessed client-side
+});
 
 export function initializeOpenAI(apiKey: string): void {
-  openaiClient = new OpenAI({
-    apiKey: apiKey,
-    dangerouslyAllowBrowser: true // Only for demo purposes
-  });
+  // Legacy function for backward compatibility - now uses env var
+  console.log('OpenAI now uses VITE_OPENAI_API_KEY from Vercel env vars');
 }
 
 export function isOpenAIInitialized(): boolean {
-  return openaiClient !== null;
+  return !!import.meta.env.VITE_OPENAI_API_KEY;
 }
 
 // Convert file to base64 for OpenAI Vision API
@@ -63,8 +64,8 @@ function parseNumber(value: any): number {
 
 // Extract invoice data using OpenAI Vision API
 export async function extractInvoiceData(file: File): Promise<InvoiceProcessingResult> {
-  if (!openaiClient) {
-    throw new Error('OpenAI not initialized. Please configure your API key in settings.');
+  if (!import.meta.env.VITE_OPENAI_API_KEY) {
+    throw new Error('OpenAI API key not configured in environment variables.');
   }
 
   try {
