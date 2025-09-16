@@ -1,4 +1,4 @@
-# Criminal Kitchen - Kitchen Management Platform
+# Kitchen Criminals - Kitchen Management Platform
 
 ## Overview
 Criminal Kitchen is a comprehensive kitchen management platform designed for restaurants and food service businesses. The system provides inventory management, supplier pricing, invoice processing, and compliance tracking in a modern, web-based interface.
