@@ -23,7 +23,7 @@ export function NavBar() {
           <div className="flex items-center space-x-8">
             <Link to="/" className="flex items-center">
               <h1 className="text-xl font-bold text-gray-900">
-                Šefas. Virtuvė
+                Kitchen Criminals
               </h1>
             </Link>
             
