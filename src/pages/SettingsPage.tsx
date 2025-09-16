@@ -1,0 +1,293 @@
+import { useState, useEffect } from 'react';
+import { showToast } from '../components/Toast';
+import { initializeOpenAI, isOpenAIInitialized } from '../services/invoiceParser';
+
+interface SettingsData {
+  openaiApiKey: string;
+  autoProcessInvoices: boolean;
+  defaultVatRate: number;
+  invoiceNotifications: boolean;
+}
+
+export function SettingsPage() {
+  const [settings, setSettings] = useState<SettingsData>({
+    openaiApiKey: '',
+    autoProcessInvoices: false,
+    defaultVatRate: 21,
+    invoiceNotifications: true
+  });
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = () => {
+    try {
+      const stored = localStorage.getItem('criminal-kitchen-settings');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setSettings(prev => ({ ...prev, ...parsed }));
+        
+        // Initialize OpenAI if key exists
+        if (parsed.openaiApiKey) {
+          initializeOpenAI(parsed.openaiApiKey);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  };
+
+  const saveSettings = async () => {
+    setIsSaving(true);
+    
+    try {
+      // Save to localStorage
+      localStorage.setItem('criminal-kitchen-settings', JSON.stringify(settings));
+      
+      // Initialize OpenAI with new key
+      if (settings.openaiApiKey) {
+        initializeOpenAI(settings.openaiApiKey);
+      }
+      
+      showToast('success', 'Settings saved successfully');
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      showToast('error', 'Failed to save settings');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const testOpenAIConnection = async () => {
+    if (!settings.openaiApiKey) {
+      showToast('error', 'Please enter an OpenAI API key first');
+      return;
+    }
+
+    setIsTestingConnection(true);
+    
+    try {
+      // Initialize with the key
+      initializeOpenAI(settings.openaiApiKey);
+      
+      // Test with a simple request
+      const response = await fetch('https://api.openai.com/v1/models', {
+        headers: {
+          'Authorization': `Bearer ${settings.openaiApiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        showToast('success', 'OpenAI connection successful!');
+      } else {
+        const error = await response.text();
+        showToast('error', `OpenAI connection failed: ${response.status}`);
+        console.error('OpenAI test error:', error);
+      }
+    } catch (error) {
+      console.error('Error testing OpenAI connection:', error);
+      showToast('error', 'Failed to test OpenAI connection');
+    } finally {
+      setIsTestingConnection(false);
+    }
+  };
+
+  const handleInputChange = (field: keyof SettingsData, value: any) => {
+    setSettings(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+        <p className="mt-2 text-gray-600">
+          Configure your Criminal Kitchen application preferences
+        </p>
+      </div>
+
+      <div className="space-y-6">
+        {/* OpenAI Configuration */}
+        <div className="bg-white shadow-sm rounded-lg">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-medium text-gray-900">OpenAI Configuration</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Configure AI-powered invoice processing
+            </p>
+          </div>
+          
+          <div className="p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                OpenAI API Key
+              </label>
+              <div className="flex space-x-2">
+                <div className="flex-1 relative">
+                  <input
+                    type={showApiKey ? 'text' : 'password'}
+                    value={settings.openaiApiKey}
+                    onChange={(e) => handleInputChange('openaiApiKey', e.target.value)}
+                    placeholder="sk-..."
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  >
+                    <span className="text-gray-400 hover:text-gray-600">
+                      {showApiKey ? '🙈' : '👁️'}
+                    </span>
+                  </button>
+                </div>
+                
+                <button
+                  onClick={testOpenAIConnection}
+                  disabled={isTestingConnection || !settings.openaiApiKey}
+                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isTestingConnection ? (
+                    <>
+                      <span className="animate-spin inline-block mr-2">⟳</span>
+                      Testing...
+                    </>
+                  ) : (
+                    'Test Connection'
+                  )}
+                </button>
+              </div>
+              
+              <p className="mt-2 text-sm text-gray-500">
+                Your OpenAI API key is stored locally and used for invoice data extraction. 
+                Get your key from{' '}
+                <a 
+                  href="https://platform.openai.com/api-keys" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-500"
+                >
+                  OpenAI Platform
+                </a>
+              </p>
+              
+              {isOpenAIInitialized() && (
+                <div className="mt-2 flex items-center text-sm text-green-600">
+                  <span className="mr-2">✅</span>
+                  OpenAI is configured and ready
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center">
+              <input
+                id="auto-process"
+                type="checkbox"
+                checked={settings.autoProcessInvoices}
+                onChange={(e) => handleInputChange('autoProcessInvoices', e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="auto-process" className="ml-2 block text-sm text-gray-900">
+                Auto-process invoices without manual review
+              </label>
+            </div>
+            <p className="text-sm text-gray-500 ml-6">
+              When enabled, approved invoices will automatically update inventory without requiring manual confirmation
+            </p>
+          </div>
+        </div>
+
+        {/* Invoice Defaults */}
+        <div className="bg-white shadow-sm rounded-lg">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-medium text-gray-900">Invoice Defaults</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Default values for invoice processing
+            </p>
+          </div>
+          
+          <div className="p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Default VAT Rate (%)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                value={settings.defaultVatRate}
+                onChange={(e) => handleInputChange('defaultVatRate', parseFloat(e.target.value))}
+                className="block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                Applied when VAT rate is not detected in invoice
+              </p>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                id="notifications"
+                type="checkbox"
+                checked={settings.invoiceNotifications}
+                onChange={(e) => handleInputChange('invoiceNotifications', e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="notifications" className="ml-2 block text-sm text-gray-900">
+                Enable invoice processing notifications
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Data & Privacy */}
+        <div className="bg-white shadow-sm rounded-lg">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-medium text-gray-900">Data & Privacy</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Information about data handling
+            </p>
+          </div>
+          
+          <div className="p-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="text-sm font-medium text-blue-800 mb-2">
+                🔒 Data Security
+              </h3>
+              <ul className="text-sm text-blue-700 space-y-1">
+                <li>• Your OpenAI API key is stored locally in your browser</li>
+                <li>• Invoice images are processed by OpenAI's GPT-4 Vision API</li>
+                <li>• Processed invoices and extracted data are stored in your Supabase database</li>
+                <li>• No data is shared with third parties beyond OpenAI for processing</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex justify-end">
+          <button
+            onClick={saveSettings}
+            disabled={isSaving}
+            className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSaving ? (
+              <>
+                <span className="animate-spin inline-block mr-2">⟳</span>
+                Saving...
+              </>
+            ) : (
+              'Save Settings'
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
