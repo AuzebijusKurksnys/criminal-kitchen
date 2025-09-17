@@ -2,15 +2,16 @@ import OpenAI from 'openai';
 import type { InvoiceLineItem, InvoiceProcessingResult, Product, ProductMatch } from '../data/types';
 import { listProducts } from '../data/store';
 import { createAzureDocumentIntelligenceService, isAzureDocumentIntelligenceAvailable } from './azureDocumentIntelligence';
+import { openaiInvoiceProcessor, isOpenAIAvailable } from './openaiModels';
 
-// OpenAI client - uses server-side API key from Vercel env vars
+// OpenAI client - legacy support (now handled by openaiModels.ts)
 const openaiClient = new OpenAI({
   apiKey: import.meta.env.VITE_OPENAI_API_KEY || '',
-  dangerouslyAllowBrowser: true // Server env var but accessed client-side
+  dangerouslyAllowBrowser: true
 });
 
+// Legacy function for backward compatibility
 export function initializeOpenAI(apiKey: string): void {
-  // Legacy function for backward compatibility - now uses env var
   console.log('OpenAI now uses VITE_OPENAI_API_KEY from Vercel env vars');
 }
 
@@ -18,293 +19,119 @@ export function isOpenAIInitialized(): boolean {
   return !!import.meta.env.VITE_OPENAI_API_KEY;
 }
 
-// Convert file to base64 for OpenAI Vision API
+// File conversion utilities
 async function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
-      // Remove data URL prefix (e.g., "data:image/jpeg;base64,")
-      const base64 = result.split(',')[1];
-      resolve(base64);
+      resolve(result.split(',')[1]);
     };
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
 }
 
-// Normalize and sanitize product names extracted from OCR to reduce noise
-function sanitizeProductName(rawName: string | undefined | null): string {
-  if (!rawName) return '';
-  let name = String(rawName)
-    .replace(/\s+/g, ' ') // collapse whitespace
-    .replace(/[\u00AD\u200B\u200C\u200D]/g, '') // soft hyphens/zero-width
-    .trim();
-  // Remove SKU-like trailing codes and parentheses-only tails
-  name = name.replace(/\s*[#(\[]?[A-Z0-9_-]{4,}[)\]]?\s*$/i, '').trim();
-  // If name is mostly digits/symbols, consider it unknown
-  const alnum = name.replace(/[^\p{L}\p{N}]/gu, '');
-  const digits = name.replace(/[^0-9]/g, '');
-  if (!alnum || (digits.length > 0 && digits.length / Math.max(1, alnum.length) > 0.6)) {
-    return '';
-  }
-  return name;
+// Sanitize product names
+function sanitizeProductName(name: string): string {
+  if (!name || typeof name !== 'string') return '';
+  
+  return name
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/[""]/g, '"')
+    .replace(/['′]/g, "'")
+    .replace(/[–—]/g, '-');
 }
 
-// Parse numbers robustly (handle commas and currency symbols)
+// Normalize units
+function normalizeUnit(unit: string): string {
+  if (!unit || typeof unit !== 'string') return 'pcs';
+  
+  const unitLower = unit.toLowerCase().trim();
+  const unitMap: { [key: string]: string } = {
+    'kg': 'kg', 'kilogram': 'kg', 'kilograms': 'kg',
+    'g': 'g', 'gram': 'g', 'grams': 'g',
+    'l': 'l', 'liter': 'l', 'litre': 'l', 'liters': 'l', 'litres': 'l',
+    'ml': 'ml', 'milliliter': 'ml', 'millilitre': 'ml',
+    'pcs': 'pcs', 'pc': 'pcs', 'piece': 'pcs', 'pieces': 'pcs',
+    'vnt': 'pcs', 'unit': 'pcs', 'units': 'pcs',
+    'm': 'm', 'meter': 'm', 'metre': 'm', 'meters': 'm', 'metres': 'm',
+    'cm': 'cm', 'centimeter': 'cm', 'centimetre': 'cm'
+  };
+
+  return unitMap[unitLower] || 'pcs';
+}
+
+// Parse numbers
 function parseNumber(value: any): number {
   if (typeof value === 'number') return value;
-  if (value == null) return 0;
-  const cleaned = String(value)
-    .replace(/[^0-9,.-]/g, '')
-    .replace(/,(?=\d{3}(\D|$))/g, '') // remove thousand separators
-    .replace(',', '.'); // decimal comma to dot
-  const num = parseFloat(cleaned);
-  return isNaN(num) ? 0 : num;
+  if (typeof value === 'string') {
+    const cleaned = value
+      .replace(/[^\d.,-]/g, '')
+      .replace(',', '.');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? 0 : num;
+  }
+  return 0;
 }
 
-// Extract invoice data using the best available OCR service
-export async function extractInvoiceData(file: File): Promise<InvoiceProcessingResult> {
-  // Try Azure Document Intelligence first (better for invoices)
+// Extract invoice data using the best available OCR service with intelligent fallback
+export async function extractInvoiceData(file: File): Promise<InvoiceProcessingResult & {
+  processingInfo?: {
+    service: string;
+    model?: string;
+    attempts?: any[];
+  }
+}> {
+  const processingInfo: any = {};
+
+  // Try Azure Document Intelligence first (specialized for invoices)
   if (isAzureDocumentIntelligenceAvailable()) {
-    console.log('Using Azure Document Intelligence for OCR');
+    console.log('🔵 Using Azure Document Intelligence for OCR');
     try {
       const azureService = createAzureDocumentIntelligenceService();
       if (azureService) {
         const result = await azureService.analyzeInvoice(file);
-        // Find product matches after extraction
         result.matches = await findProductMatches(result.lineItems);
-        return result;
+        
+        return {
+          ...result,
+          processingInfo: {
+            service: 'Azure Document Intelligence',
+            model: 'prebuilt-invoice'
+          }
+        };
       }
     } catch (error) {
-      console.error('Azure Document Intelligence failed, falling back to OpenAI:', error);
+      console.warn('Azure Document Intelligence failed, falling back to OpenAI:', error);
+      processingInfo.azureError = error instanceof Error ? error.message : 'Unknown error';
     }
   }
 
-  // Fallback to OpenAI Vision API
-  if (!import.meta.env.VITE_OPENAI_API_KEY) {
+  // Fallback to OpenAI Multi-Model System
+  if (!isOpenAIAvailable()) {
     throw new Error('No OCR service configured. Please set VITE_OPENAI_API_KEY or VITE_AZURE_DOCUMENT_INTELLIGENCE_* environment variables.');
   }
 
-  console.log('Using OpenAI GPT-4o for OCR');
-
+  console.log('🟡 Using OpenAI Multi-Model System for OCR');
+  
   try {
-    const base64Image = await fileToBase64(file);
-    const mimeType = file.type;
-
-    const prompt = `
-You are an expert invoice OCR specialist with advanced text recognition capabilities. Analyze this invoice image with EXTREME PRECISION and extract ALL data. 
-
-CRITICAL: This may be a low-quality smartphone photo with poor lighting, blur, or perspective distortion. Apply maximum OCR analysis effort.
-
-REQUIRED JSON STRUCTURE:
-{
-  "invoice": {
-    "invoiceNumber": "exact invoice number",
-    "invoiceDate": "YYYY-MM-DD format",
-    "supplierName": "exact company name",
-    "supplierEmail": "email if visible",
-    "supplierPhone": "phone if visible",
-    "totalExclVat": number,
-    "totalInclVat": number,
-    "vatAmount": number,
-    "discountAmount": number,
-    "currency": "EUR"
-  },
-  "lineItems": [
-    {
-      "productName": "exact product name as written",
-      "description": "additional details if any",
-      "quantity": number,
-      "unit": "exact unit (kg/pcs/l/ml/g/etc)",
-      "unitPrice": number,
-      "totalPrice": number,
-      "vatRate": number
-    }
-  ]
-}
-
-CRITICAL EXTRACTION RULES:
-1. SYSTEMATIC SCANNING: Start from top-left, read systematically across and down the entire document
-2. PDF TEXT EXTRACTION: If this is a PDF, focus on text layers first, then visual elements
-3. HANDLE POOR QUALITY: For blurry/low-quality images, apply advanced OCR techniques:
-   - Look for patterns in tables and structured data
-   - Cross-reference numbers for consistency
-   - Use context clues from surrounding text
-4. EXACT TRANSCRIPTION: Copy text exactly as written, preserve special characters and accents
-5. NUMBER PARSING: Remove €, $, currencies, commas, spaces - convert to pure decimal numbers
-6. DATE FORMATS: Convert all date formats to YYYY-MM-DD:
-   - DD/MM/YYYY → YYYY-MM-DD
-   - DD.MM.YYYY → YYYY-MM-DD
-   - YYYY-MM-DD (keep as is)
-7. UNITS STANDARDIZATION: Extract exact units, handle common variations:
-   - vnt./pcs./pc./piece → pcs
-   - kg/kilogram → kg
-   - l/liter/litre → l
-   - ml/milliliter → ml
-8. VAT HANDLING: Calculate VAT if not explicitly shown, common rates: 0%, 5%, 9%, 21%
-9. MULTI-LANGUAGE SUPPORT:
-   - Lithuanian: PVM=VAT, Data=Date, Suma=Total, Kiekis=Quantity
-   - English: VAT, Date, Total, Quantity
-   - Handle mixed language invoices
-10. TABLE EXTRACTION: Identify and parse tabular data:
-    - Product/service descriptions
-    - Quantities and units
-    - Unit prices and total prices
-    - VAT rates per line item
-
-ADVANCED OCR TECHNIQUES FOR POOR QUALITY:
-- For blurred numbers: Look for digit patterns and context
-- For skewed text: Apply perspective correction mentally
-- For faded text: Use surrounding context to infer missing characters
-- For overlapping text: Separate overlaid elements
-- For handwritten annotations: Focus on printed text, ignore handwriting unless it's the main content
-
-QUALITY ASSURANCE:
-- Mathematical validation: Line items must sum to invoice totals (±0.02 tolerance for rounding)
-- Date validation: Ensure dates are realistic (not in future, not before 1990)
-- VAT consistency: Check if VAT calculations are correct across line items
-- Currency consistency: All amounts should use the same currency
-- Completeness check: Ensure no line items are missed from tables
-
-ERROR HANDLING:
-- If text is completely unreadable, mark field as null but continue extraction
-- If numbers are unclear, provide best estimate with context
-- If structure is unclear, follow the most logical interpretation
-- Always extract maximum possible data even if some fields are incomplete
-
-Extract EVERYTHING visible with maximum accuracy. Quality over speed - take time to analyze each section thoroughly.
-`;
-
-    const isPDF = mimeType === 'application/pdf';
-    
-    const response = await openaiClient.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: `You are a highly accurate invoice data extraction specialist. You MUST extract every piece of information from invoices with 100% accuracy. Return only valid JSON.
-          
-          ${isPDF ? 'SPECIAL INSTRUCTIONS FOR PDF: This is a PDF file rendered as an image. PDF invoices often have very clean text and structured layouts. Pay extra attention to text layers, table structures, and precise number formatting. PDFs typically have higher text quality than photos.' : 'SPECIAL INSTRUCTIONS FOR IMAGE: This appears to be a photo or image scan. Apply advanced OCR techniques for potentially unclear text, lighting variations, and perspective distortion.'}`
-        },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: prompt },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:${mimeType};base64,${base64Image}`,
-                detail: "high"
-              }
-            }
-          ]
-        }
-      ],
-      max_tokens: 6000, // Increased for very complex invoices
-      temperature: 0.1, // Slight creativity for better interpretation
-      response_format: { type: "json_object" } // Ensure JSON response
-    });
-
-    const content = response.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error('No response from OpenAI');
-    }
-
-    // Parse the JSON response
-    let extractedData;
-    try {
-      // Remove any markdown code blocks if present
-      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-      const jsonString = jsonMatch ? jsonMatch[1] : content;
-      extractedData = JSON.parse(jsonString);
-      
-      // Validate required structure
-      if (!extractedData.invoice || !extractedData.lineItems) {
-        throw new Error('Invalid response structure: missing invoice or lineItems');
-      }
-      
-      console.log('OpenAI extraction successful:', {
-        invoiceNumber: extractedData.invoice?.invoiceNumber,
-        lineItemsCount: extractedData.lineItems?.length || 0,
-        totalInclVat: extractedData.invoice?.totalInclVat
-      });
-      
-    } catch (parseError) {
-      console.error('Failed to parse OpenAI response:', {
-        content: content.substring(0, 500) + '...',
-        error: parseError
-      });
-      throw new Error(`Failed to parse invoice data: ${parseError instanceof Error ? parseError.message : 'Invalid JSON format'}. Please try again or check the image quality.`);
-    }
-
-    // Validate and transform the extracted data
-    const result: InvoiceProcessingResult = {
-      invoice: {
-        invoiceNumber: sanitizeProductName(extractedData.invoice?.invoiceNumber) || `INV-${Date.now()}`,
-        invoiceDate: extractedData.invoice?.invoiceDate || new Date().toISOString().split('T')[0],
-        totalExclVat: parseNumber(extractedData.invoice?.totalExclVat) || 0,
-        totalInclVat: parseNumber(extractedData.invoice?.totalInclVat) || 0,
-        vatAmount: parseNumber(extractedData.invoice?.vatAmount) || 0,
-        discountAmount: parseNumber(extractedData.invoice?.discountAmount) || 0,
-        currency: extractedData.invoice?.currency || 'EUR',
-        status: 'review' as const,
-        fileName: file.name,
-        fileSize: file.size,
-        mimeType: file.type,
-        extractedData: extractedData,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      },
-      lineItems: (extractedData.lineItems || []).map((item: any, index: number) => {
-        const sanitizedName = sanitizeProductName(item.productName);
-        return {
-          productName: sanitizedName || `Product ${index + 1}`,
-          description: item.description || '',
-          quantity: parseNumber(item.quantity) || 1,
-          unit: item.unit || 'pcs',
-          unitPrice: parseNumber(item.unitPrice) || 0,
-          totalPrice: parseNumber(item.totalPrice) || 0,
-          vatRate: parseNumber(item.vatRate) || 21,
-          needsReview: !sanitizedName,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-      }),
-      matches: {},
-      errors: [],
-      warnings: []
-    };
-
-    // Add supplier information to invoice if extracted
-    if (extractedData.invoice?.supplierName) {
-      result.supplierInfo = {
-        name: extractedData.invoice.supplierName,
-        email: extractedData.invoice.supplierEmail || '',
-        phone: extractedData.invoice.supplierPhone || ''
-      };
-    }
-
-    // Calculate VAT amount if not provided
-    if (result.invoice.vatAmount === 0 && (result.invoice.totalInclVat || 0) > (result.invoice.totalExclVat || 0)) {
-      result.invoice.vatAmount = (result.invoice.totalInclVat || 0) - (result.invoice.totalExclVat || 0);
-    }
-
-    // Validate totals
-    const lineItemsTotal = result.lineItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
-    const invoiceTotal = result.invoice.totalExclVat || 0;
-    if (Math.abs(lineItemsTotal - invoiceTotal) > 0.01) {
-      result.warnings.push(`Line items total (${lineItemsTotal.toFixed(2)}) doesn't match invoice total (${invoiceTotal.toFixed(2)})`);
-    }
-
-    // Find product matches
+    const { result, modelUsed, attempts } = await openaiInvoiceProcessor.processInvoiceWithFallback(file);
     result.matches = await findProductMatches(result.lineItems);
-
-    return result;
-
+    
+    return {
+      ...result,
+      processingInfo: {
+        service: 'OpenAI',
+        model: modelUsed,
+        attempts,
+        azureError: processingInfo.azureError
+      }
+    };
   } catch (error) {
-    console.error('Error extracting invoice data:', error);
-    throw new Error(`Failed to extract invoice data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error('All OCR services failed:', error);
+    throw new Error(`OCR processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -380,5 +207,3 @@ function findSimilarProducts(searchName: string, products: Product[]): ProductMa
 
   return matches.sort((a, b) => b.confidence - a.confidence).slice(0, 3);
 }
-
-

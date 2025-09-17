@@ -1,18 +1,21 @@
 import { useState, useEffect } from 'react';
 import { showToast } from '../components/Toast';
 import { initializeOpenAI, isOpenAIInitialized } from '../services/invoiceParser';
+import { openaiInvoiceProcessor, OPENAI_MODELS, type OpenAIModelKey } from '../services/openaiModels';
 
 interface SettingsData {
   autoProcessInvoices: boolean;
   defaultVatRate: number;
   invoiceNotifications: boolean;
+  preferredOpenAIModel: OpenAIModelKey;
 }
 
 export function SettingsPage() {
   const [settings, setSettings] = useState<SettingsData>({
     autoProcessInvoices: false,
     defaultVatRate: 21,
-    invoiceNotifications: true
+    invoiceNotifications: true,
+    preferredOpenAIModel: 'gpt-4o'
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -27,7 +30,10 @@ export function SettingsPage() {
         const parsed = JSON.parse(stored);
         setSettings(prev => ({ ...prev, ...parsed }));
         
-        // OpenAI now uses environment variables
+        // Apply preferred OpenAI model
+        if (parsed.preferredOpenAIModel) {
+          openaiInvoiceProcessor.setPreferredModel(parsed.preferredOpenAIModel);
+        }
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -96,6 +102,38 @@ export function SettingsPage() {
               <p>OpenAI API key is now configured via Vercel environment variables for security.</p>
               <p>Set VITE_OPENAI_API_KEY in your deployment environment.</p>
             </div>
+
+            {isOpenAIInitialized() && (
+              <div className="mt-6">
+                <label htmlFor="preferred-model" className="block text-sm font-medium text-gray-700">
+                  Preferred OpenAI Model
+                </label>
+                <select
+                  id="preferred-model"
+                  value={settings.preferredOpenAIModel}
+                  onChange={(e) => {
+                    const model = e.target.value as OpenAIModelKey;
+                    handleInputChange('preferredOpenAIModel', model);
+                    openaiInvoiceProcessor.setPreferredModel(model);
+                  }}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                >
+                  {Object.entries(OPENAI_MODELS).map(([key, config]) => (
+                    <option key={key} value={key}>
+                      {config.name} - {config.description}
+                    </option>
+                  ))}
+                </select>
+                <div className="mt-2 text-xs text-gray-500">
+                  <div className="mb-1">
+                    <strong>Current model strengths:</strong> {OPENAI_MODELS[settings.preferredOpenAIModel]?.strengths.join(', ')}
+                  </div>
+                  <div>
+                    <strong>Cost:</strong> ${OPENAI_MODELS[settings.preferredOpenAIModel]?.costPer1kTokens}/1k tokens
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center">
               <input
