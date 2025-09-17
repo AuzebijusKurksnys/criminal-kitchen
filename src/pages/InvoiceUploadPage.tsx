@@ -112,7 +112,7 @@ export function InvoiceUploadPage() {
             Step 1: Select Invoice File
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Choose a PDF document or take a photo of your invoice
+            Upload an image of your invoice (JPG, PNG, GIF, or WebP format)
           </p>
         </div>
 
@@ -120,7 +120,7 @@ export function InvoiceUploadPage() {
           {!selectedFile ? (
             <FileUpload
               onFileSelect={handleFileSelect}
-              accept=".pdf,.jpg,.jpeg,.png,.heic"
+              accept=".jpg,.jpeg,.png,.gif,.webp"
               maxSize={10 * 1024 * 1024} // 10MB
             />
           ) : (

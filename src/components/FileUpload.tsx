@@ -13,7 +13,7 @@ interface FileUploadProps {
 export function FileUpload({ 
   onFileSelect, 
   onMultipleFileSelect,
-  accept = '.pdf,.jpg,.jpeg,.png,.heic', 
+  accept = '.jpg,.jpeg,.png,.gif,.webp', 
   maxSize = 10 * 1024 * 1024, // 10MB
   className = '',
   multiple = false,

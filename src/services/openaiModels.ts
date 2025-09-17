@@ -136,6 +136,11 @@ CRITICAL RULES:
     modelUsed: OpenAIModelKey;
     attempts: Array<{model: OpenAIModelKey; success: boolean; error?: string}>;
   }> {
+    // Validate file is an image
+    if (!this.isValidImageFile(file)) {
+      throw new Error(`Invalid image file. File type: ${file.type}, Name: ${file.name}`);
+    }
+    
     const attempts: Array<{model: OpenAIModelKey; success: boolean; error?: string}> = [];
     const modelsToTry = [this.preferredModel, ...this.fallbackModels];
 
@@ -173,10 +178,20 @@ CRITICAL RULES:
   // Process with specific model
   private async processWithModel(file: File, model: OpenAIModelKey): Promise<InvoiceProcessingResult> {
     const modelConfig = OPENAI_MODELS[model];
+    
+    // Debug file information
+    console.log('File details:', {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      lastModified: file.lastModified
+    });
+    
     const base64Image = await this.fileToBase64(file);
     
     // Ensure we have a valid image MIME type
     const imageMimeType = this.getValidImageMimeType(file.type);
+    console.log('Using MIME type:', imageMimeType);
     
     const response = await this.client.chat.completions.create({
       model: model,
@@ -281,16 +296,62 @@ CRITICAL RULES:
     });
   }
 
+  private isValidImageFile(file: File): boolean {
+    // Check if file type starts with 'image/'
+    if (!file.type || !file.type.startsWith('image/')) {
+      console.warn('File is not an image type:', file.type);
+      return false;
+    }
+    
+    // Check file size (max 20MB for OpenAI)
+    if (file.size > 20 * 1024 * 1024) {
+      console.warn('File too large:', file.size, 'bytes');
+      return false;
+    }
+    
+    // Check if file has a valid extension for OpenAI vision models
+    const fileName = file.name.toLowerCase();
+    const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
+    
+    if (!hasValidExtension) {
+      console.warn('File extension not supported by OpenAI:', fileName);
+      return false;
+    }
+    
+    // Check MIME type is supported by OpenAI
+    const supportedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const normalizedMimeType = file.type.toLowerCase().trim();
+    const isSupportedMimeType = supportedMimeTypes.includes(normalizedMimeType) || 
+                                normalizedMimeType === 'image/jpg';
+    
+    if (!isSupportedMimeType) {
+      console.warn('MIME type not supported by OpenAI:', file.type);
+      return false;
+    }
+    
+    return true;
+  }
+
   private getValidImageMimeType(fileType: string): string {
     // OpenAI vision models support: image/jpeg, image/png, image/gif, image/webp
     const supportedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     
-    if (supportedTypes.includes(fileType)) {
-      return fileType;
+    // Normalize the file type
+    const normalizedType = fileType.toLowerCase().trim();
+    
+    if (supportedTypes.includes(normalizedType)) {
+      return normalizedType;
+    }
+    
+    // Handle common variations
+    if (normalizedType === 'image/jpg') {
+      return 'image/jpeg';
     }
     
     // If file type is not supported or unknown, default to JPEG
     // This handles cases where file.type might be empty or unsupported
+    console.warn(`Unsupported file type: ${fileType}, defaulting to image/jpeg`);
     return 'image/jpeg';
   }
 
