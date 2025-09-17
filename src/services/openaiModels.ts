@@ -20,13 +20,13 @@ export const OPENAI_MODELS = {
     strengths: ['speed', 'standard layouts', 'consistent formatting'] as string[],
     costPer1kTokens: 0.003
   },
-  'gpt-4-vision-preview': {
-    name: 'GPT-4 Vision Preview',
-    description: 'Reliable fallback option',
+  'gpt-4o-mini': {
+    name: 'GPT-4o Mini',
+    description: 'Fast and cost-effective fallback option',
     maxTokens: 4000,
     temperature: 0.0,
-    strengths: ['reliability', 'standard invoices', 'cost-effective'] as string[],
-    costPer1kTokens: 0.002
+    strengths: ['speed', 'cost-effective', 'reliability'] as string[],
+    costPer1kTokens: 0.00015
   }
 } as const;
 
@@ -50,7 +50,7 @@ class OpenAIInvoiceProcessor {
     
     // Set model preference order
     this.preferredModel = 'gpt-4o';
-    this.fallbackModels = ['gpt-4-turbo', 'gpt-4-vision-preview'];
+    this.fallbackModels = ['gpt-4-turbo', 'gpt-4o-mini'];
   }
 
   // Get optimized prompt for each model
@@ -77,9 +77,9 @@ OPTIMIZED FOR SPEED AND ACCURACY:
 - Extract line items in table format
 - Ensure consistent number formatting`,
 
-      'gpt-4-vision-preview': `${basePrompt}
+      'gpt-4o-mini': `${basePrompt}
 
-RELIABLE EXTRACTION MODE:
+FAST AND EFFICIENT MODE:
 - Focus on core invoice information
 - Use conservative approach for unclear text
 - Double-check numerical values
@@ -175,6 +175,9 @@ CRITICAL RULES:
     const modelConfig = OPENAI_MODELS[model];
     const base64Image = await this.fileToBase64(file);
     
+    // Ensure we have a valid image MIME type
+    const imageMimeType = this.getValidImageMimeType(file.type);
+    
     const response = await this.client.chat.completions.create({
       model: model,
       messages: [
@@ -188,7 +191,7 @@ CRITICAL RULES:
             {
               type: "image_url",
               image_url: {
-                url: `data:${file.type};base64,${base64Image}`,
+                url: `data:${imageMimeType};base64,${base64Image}`,
                 detail: "high"
               }
             }
@@ -269,11 +272,26 @@ CRITICAL RULES:
       const reader = new FileReader();
       reader.onload = () => {
         const base64 = reader.result as string;
-        resolve(base64.split(',')[1]);
+        // Extract just the base64 data part (after the comma)
+        const base64Data = base64.split(',')[1];
+        resolve(base64Data);
       };
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
+  }
+
+  private getValidImageMimeType(fileType: string): string {
+    // OpenAI vision models support: image/jpeg, image/png, image/gif, image/webp
+    const supportedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    
+    if (supportedTypes.includes(fileType)) {
+      return fileType;
+    }
+    
+    // If file type is not supported or unknown, default to JPEG
+    // This handles cases where file.type might be empty or unsupported
+    return 'image/jpeg';
   }
 
   private parseNumber(value: any): number {

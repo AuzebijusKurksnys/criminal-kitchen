@@ -119,7 +119,7 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
   try {
     const { result, modelUsed, attempts } = await openaiInvoiceProcessor.processInvoiceWithFallback(file);
     result.matches = await findProductMatches(result.lineItems);
-    
+
     return {
       ...result,
         processingInfo: {
