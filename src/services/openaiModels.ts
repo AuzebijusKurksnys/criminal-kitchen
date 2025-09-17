@@ -9,7 +9,7 @@ export const OPENAI_MODELS = {
     description: 'Latest vision model - best for complex invoices',
     maxTokens: 6000,
     temperature: 0.1,
-    strengths: ['complex layouts', 'poor quality images', 'multi-language'],
+    strengths: ['complex layouts', 'poor quality images', 'multi-language'] as string[],
     costPer1kTokens: 0.005
   },
   'gpt-4-turbo': {
@@ -17,7 +17,7 @@ export const OPENAI_MODELS = {
     description: 'Faster processing - good for standard invoices',
     maxTokens: 4000,
     temperature: 0.0,
-    strengths: ['speed', 'standard layouts', 'consistent formatting'],
+    strengths: ['speed', 'standard layouts', 'consistent formatting'] as string[],
     costPer1kTokens: 0.003
   },
   'gpt-4-vision-preview': {
@@ -25,7 +25,7 @@ export const OPENAI_MODELS = {
     description: 'Reliable fallback option',
     maxTokens: 4000,
     temperature: 0.0,
-    strengths: ['reliability', 'standard invoices', 'cost-effective'],
+    strengths: ['reliability', 'standard invoices', 'cost-effective'] as string[],
     costPer1kTokens: 0.002
   }
 } as const;

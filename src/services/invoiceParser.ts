@@ -122,12 +122,11 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
     
     return {
       ...result,
-      processingInfo: {
-        service: 'OpenAI',
-        model: modelUsed,
-        attempts,
-        azureError: processingInfo.azureError
-      }
+        processingInfo: {
+          service: 'OpenAI',
+          model: modelUsed,
+          attempts
+        }
     };
   } catch (error) {
     console.error('All OCR services failed:', error);
