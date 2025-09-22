@@ -30,8 +30,10 @@ class PDFProcessor {
       const pdfjs = await import('pdfjs-dist');
       this.pdfjsLib = pdfjs;
       
-      // Set worker source
-      pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+      // Use jsDelivr CDN with proper version format
+      pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+      
+      console.log(`PDF.js v${pdfjs.version} initialized successfully`);
     } catch (error) {
       console.error('Failed to load PDF.js:', error);
       throw new Error('PDF.js library not available. Please install pdfjs-dist package.');
