@@ -43,11 +43,12 @@ class PDFProcessor {
       const pdfjs = await import('pdfjs-dist');
       this.pdfjsLib = pdfjs;
       
-      // Use reliable CDN with fallback
-      const workerUrl = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+      // Use local worker file (more reliable than CDNs)
+      const workerUrl = '/js/pdf.worker.min.js';
       pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
       
       console.log(`✅ PDF.js v${pdfjs.version} loaded successfully`);
+      console.log(`🔗 Using local worker: ${workerUrl}`);
     } catch (error) {
       console.error('❌ Failed to load PDF.js:', error);
       this.initPromise = null; // Reset so we can try again

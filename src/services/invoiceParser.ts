@@ -109,6 +109,7 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
     service: string;
     model?: string;
     attempts?: any[];
+    azureError?: string;
   }
 }> {
   const processingInfo: any = {};

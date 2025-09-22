@@ -9,7 +9,7 @@ export const OPENAI_MODELS = {
     description: 'Latest vision model - best for complex invoices',
     maxTokens: 6000,
     temperature: 0.1,
-    strengths: ['complex layouts', 'poor quality images', 'multi-language'] as string[],
+    strengths: ['complex layouts', 'poor quality images', 'multi-language'],
     costPer1kTokens: 0.005
   },
   'gpt-4-turbo': {
@@ -17,7 +17,7 @@ export const OPENAI_MODELS = {
     description: 'Faster processing - good for standard invoices',
     maxTokens: 4000,
     temperature: 0.0,
-    strengths: ['speed', 'standard layouts', 'consistent formatting'] as string[],
+    strengths: ['speed', 'standard layouts', 'consistent formatting'],
     costPer1kTokens: 0.003
   },
   'gpt-4o-mini': {
@@ -25,7 +25,7 @@ export const OPENAI_MODELS = {
     description: 'Fast and cost-effective fallback option',
     maxTokens: 4000,
     temperature: 0.0,
-    strengths: ['speed', 'cost-effective', 'reliability'] as string[],
+    strengths: ['speed', 'cost-effective', 'reliability'],
     costPer1kTokens: 0.00015
   }
 } as const;
@@ -395,7 +395,8 @@ CRITICAL RULES:
   }> {
     return Object.entries(OPENAI_MODELS).map(([key, config]) => ({
       key: key as OpenAIModelKey,
-      ...config
+      ...config,
+      strengths: [...config.strengths] // Convert readonly array to mutable array
     }));
   }
 
