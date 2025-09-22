@@ -13,7 +13,7 @@ interface FileUploadProps {
 export function FileUpload({ 
   onFileSelect, 
   onMultipleFileSelect,
-  accept = '.jpg,.jpeg,.png,.gif,.webp', 
+  accept = '.jpg,.jpeg,.png,.gif,.webp,.pdf', 
   maxSize = 10 * 1024 * 1024, // 10MB
   className = '',
   multiple = false,
@@ -154,7 +154,7 @@ export function FileUpload({
               {multiple ? 'Drop invoices here or click to upload' : 'Drop your invoice here or click to upload'}
             </p>
             <p className="text-sm text-gray-500 mt-1">
-              Supports PDF, JPG, PNG, HEIC up to {Math.round(maxSize / 1024 / 1024)}MB
+              Supports PDF, JPG, PNG, GIF, WebP up to {Math.round(maxSize / 1024 / 1024)}MB
               {multiple ? ` • Max ${maxFiles} files` : ''}
             </p>
           </div>

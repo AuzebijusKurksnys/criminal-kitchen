@@ -3,6 +3,8 @@ import type { InvoiceLineItem, InvoiceProcessingResult, Product, ProductMatch } 
 import { listProducts } from '../data/store';
 import { createAzureDocumentIntelligenceService, isAzureDocumentIntelligenceAvailable } from './azureDocumentIntelligence';
 import { openaiInvoiceProcessor, isOpenAIAvailable } from './openaiModels';
+import { pdfProcessor } from './pdfProcessor';
+import PDFProcessor from './pdfProcessor';
 
 // OpenAI client - legacy support (now handled by openaiModels.ts)
 const openaiClient = new OpenAI({
@@ -30,6 +32,31 @@ async function fileToBase64(file: File): Promise<string> {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+// Convert PDF to image for OCR processing
+async function processPDFFile(file: File): Promise<File> {
+  console.log('🔄 Converting PDF to image for OCR...');
+  
+  const result = await pdfProcessor.processFirstPageOnly(file);
+  
+  if (!result.success || result.pages.length === 0) {
+    throw new Error(`PDF processing failed: ${result.error || 'Unknown error'}`);
+  }
+  
+  // Convert the first page to a File object
+  const page = result.pages[0];
+  const response = await fetch(page.imageDataUrl);
+  const blob = await response.blob();
+  
+  // Create a new File object with PNG format
+  const imageFile = new File([blob], `${file.name}_page1.png`, {
+    type: 'image/png',
+    lastModified: Date.now()
+  });
+  
+  console.log(`✅ PDF converted to image: ${imageFile.size} bytes, ${page.width}x${page.height}px`);
+  return imageFile;
 }
 
 // Sanitize product names
@@ -85,6 +112,25 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
   }
 }> {
   const processingInfo: any = {};
+  
+  // Handle PDF files - convert to image first
+  let processedFile = file;
+  if (PDFProcessor.isPDFFile(file)) {
+    console.log('📄 PDF file detected, converting to image...');
+    
+    const validation = PDFProcessor.validatePDFFile(file);
+    if (!validation.valid) {
+      throw new Error(`Invalid PDF file: ${validation.error}`);
+    }
+    
+    try {
+      processedFile = await processPDFFile(file);
+      processingInfo.pdfProcessed = true;
+    } catch (error) {
+      console.error('PDF processing failed:', error);
+      throw new Error(`Failed to process PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
 
   // Try Azure Document Intelligence first (specialized for invoices)
   if (isAzureDocumentIntelligenceAvailable()) {
@@ -92,14 +138,15 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
     try {
       const azureService = createAzureDocumentIntelligenceService();
       if (azureService) {
-        const result = await azureService.analyzeInvoice(file);
+        const result = await azureService.analyzeInvoice(processedFile);
         result.matches = await findProductMatches(result.lineItems);
         
         return {
           ...result,
           processingInfo: {
             service: 'Azure Document Intelligence',
-            model: 'prebuilt-invoice'
+            model: 'prebuilt-invoice',
+            ...processingInfo
           }
         };
       }
@@ -117,7 +164,7 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
   console.log('🟡 Using OpenAI Multi-Model System for OCR');
   
   try {
-    const { result, modelUsed, attempts } = await openaiInvoiceProcessor.processInvoiceWithFallback(file);
+    const { result, modelUsed, attempts } = await openaiInvoiceProcessor.processInvoiceWithFallback(processedFile);
     result.matches = await findProductMatches(result.lineItems);
 
     return {
@@ -125,7 +172,8 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
         processingInfo: {
           service: 'OpenAI',
           model: modelUsed,
-          attempts
+          attempts,
+          ...processingInfo
         }
     };
   } catch (error) {

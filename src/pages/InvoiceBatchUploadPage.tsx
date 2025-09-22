@@ -164,7 +164,7 @@ export function InvoiceBatchUploadPage() {
                 Select Invoice Files
               </h2>
               <p className="mt-1 text-sm text-gray-500">
-                Choose multiple PDF documents or images of your invoices
+                Choose multiple PDF documents or images of your invoices. PDF files are automatically converted to images for processing.
               </p>
             </div>
 

@@ -112,7 +112,7 @@ export function InvoiceUploadPage() {
             Step 1: Select Invoice File
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Upload an image of your invoice (JPG, PNG, GIF, or WebP format)
+            Upload an image or PDF of your invoice (JPG, PNG, GIF, WebP, or PDF format)
           </p>
         </div>
 
@@ -120,7 +120,7 @@ export function InvoiceUploadPage() {
           {!selectedFile ? (
             <FileUpload
               onFileSelect={handleFileSelect}
-              accept=".jpg,.jpeg,.png,.gif,.webp"
+              accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
               maxSize={10 * 1024 * 1024} // 10MB
             />
           ) : (
@@ -199,7 +199,7 @@ export function InvoiceUploadPage() {
         <div className="mt-4 p-3 bg-blue-100 rounded">
           <p className="text-sm text-blue-800">
             <strong>Tip:</strong> For best results, ensure your invoice is clearly visible and well-lit if taking a photo.
-            The system works with both Lithuanian and English invoices.
+            PDF files are automatically converted to images for processing. The system works with both Lithuanian and English invoices.
           </p>
         </div>
       </div>
