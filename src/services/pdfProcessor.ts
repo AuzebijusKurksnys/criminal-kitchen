@@ -17,26 +17,41 @@ export interface PDFProcessingResult {
 
 class PDFProcessor {
   private pdfjsLib: any = null;
+  private initPromise: Promise<void> | null = null;
 
   constructor() {
-    this.initializePDFJS();
+    // Don't initialize immediately - wait until first use
   }
 
   private async initializePDFJS(): Promise<void> {
     if (this.pdfjsLib) return;
+    
+    // Prevent multiple initialization attempts
+    if (this.initPromise) {
+      return this.initPromise;
+    }
 
+    this.initPromise = this.doInitialize();
+    return this.initPromise;
+  }
+
+  private async doInitialize(): Promise<void> {
     try {
-      // Dynamically import PDF.js
+      console.log('🔄 Loading PDF.js library...');
+      
+      // Dynamically import PDF.js only when needed
       const pdfjs = await import('pdfjs-dist');
       this.pdfjsLib = pdfjs;
       
-      // Use jsDelivr CDN with proper version format
-      pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+      // Use reliable CDN with fallback
+      const workerUrl = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+      pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
       
-      console.log(`PDF.js v${pdfjs.version} initialized successfully`);
+      console.log(`✅ PDF.js v${pdfjs.version} loaded successfully`);
     } catch (error) {
-      console.error('Failed to load PDF.js:', error);
-      throw new Error('PDF.js library not available. Please install pdfjs-dist package.');
+      console.error('❌ Failed to load PDF.js:', error);
+      this.initPromise = null; // Reset so we can try again
+      throw new Error('PDF.js library not available. Please check your internet connection.');
     }
   }
 

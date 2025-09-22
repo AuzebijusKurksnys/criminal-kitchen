@@ -5,7 +5,8 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
-    include: ['pdfjs-dist']
+    include: ['pdfjs-dist'],
+    exclude: ['pdfjs-dist/build/pdf.worker.min.js']
   },
   build: {
     rollupOptions: {
@@ -14,6 +15,12 @@ export default defineConfig({
           'pdf': ['pdfjs-dist']
         }
       }
+    },
+    chunkSizeWarningLimit: 1000 // Increase to avoid warnings for PDF.js
+  },
+  server: {
+    fs: {
+      strict: false
     }
   }
 })
