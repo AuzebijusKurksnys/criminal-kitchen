@@ -6,6 +6,7 @@ import { InvoicesPage } from './pages/InvoicesPage';
 import { InvoiceUploadPage } from './pages/InvoiceUploadPage';
 import { InvoiceBatchUploadPage } from './pages/InvoiceBatchUploadPage';
 import { InvoiceReviewPage } from './pages/InvoiceReviewPage';
+import { InvoiceBatchReviewPage } from './pages/InvoiceBatchReviewPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TechCardsPage } from './pages/TechCardsPage';
 import { JournalsPage } from './pages/JournalsPage';
@@ -23,6 +24,7 @@ export function AppRoutes() {
       <Route path="/invoices/upload" element={<InvoiceUploadPage />} />
       <Route path="/invoices/batch-upload" element={<InvoiceBatchUploadPage />} />
       <Route path="/invoices/review" element={<InvoiceReviewPage />} />
+      <Route path="/invoices/batch-review" element={<InvoiceBatchReviewPage />} />
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="/tech-cards" element={<TechCardsPage />} />
       <Route path="/journals" element={<JournalsPage />} />

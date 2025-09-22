@@ -126,6 +126,27 @@ export function InvoiceBatchUploadPage() {
     });
   };
 
+  const handleBatchReview = () => {
+    const completedItems = processingItems
+      .filter(item => item.status === 'completed' && item.result)
+      .map((item, index) => ({
+        file: item.file,
+        result: item.result!,
+        invoiceIndex: index
+      }));
+    
+    if (completedItems.length === 0) {
+      showToast('error', 'No successfully processed invoices to review');
+      return;
+    }
+    
+    navigate('/invoices/batch-review', {
+      state: {
+        batchResults: completedItems
+      }
+    });
+  };
+
   const getStatusIcon = (status: BatchProcessingItem['status']) => {
     switch (status) {
       case 'pending': return '⏳';
@@ -286,12 +307,28 @@ export function InvoiceBatchUploadPage() {
                 </div>
                 
                 {processingItems.length > 0 && !isProcessing && (
-                  <div className="mt-4 p-4 bg-gray-100 rounded-lg">
-                    <div className="flex justify-between text-sm">
-                      <span>Completed: {processingItems.filter(item => item.status === 'completed').length}</span>
-                      <span>Failed: {processingItems.filter(item => item.status === 'error').length}</span>
-                      <span>Total: {processingItems.length}</span>
+                  <div className="mt-4 space-y-4">
+                    <div className="p-4 bg-gray-100 rounded-lg">
+                      <div className="flex justify-between text-sm">
+                        <span>Completed: {processingItems.filter(item => item.status === 'completed').length}</span>
+                        <span>Failed: {processingItems.filter(item => item.status === 'error').length}</span>
+                        <span>Total: {processingItems.length}</span>
+                      </div>
                     </div>
+                    
+                    {processingItems.filter(item => item.status === 'completed').length > 0 && (
+                      <div className="text-center">
+                        <button
+                          onClick={handleBatchReview}
+                          className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                        >
+                          📋 Review All {processingItems.filter(item => item.status === 'completed').length} Invoices
+                        </button>
+                        <p className="mt-2 text-sm text-gray-600">
+                          Review and approve all processed invoices with grouped products for faster processing
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
