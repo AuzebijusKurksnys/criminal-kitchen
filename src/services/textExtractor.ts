@@ -77,9 +77,11 @@ export class TextExtractor {
   }
 
   // Extract quantity, unit, and price data for a specific product (Lithuanian invoice format)
-  private static extractProductData(productName: string, contextLines: string[]) {
+  private static extractProductData(productName: string, contextLines: string[], allLines: string[], productIndex: number) {
     const allText = contextLines.join(' ');
-    console.log('🔍 Extracting data for:', productName.substring(0, 30) + '...', 'from context:', allText.substring(0, 200) + '...');
+    console.log('🔍 Extracting data for:', productName.substring(0, 30) + '...');
+    console.log('📋 Context lines:', contextLines);
+    console.log('📄 Raw context text:', allText);
     
     let quantity = 1;
     let unit = 'kg';
@@ -87,25 +89,29 @@ export class TextExtractor {
     let totalPrice = 0;
     let discount = 0;
     
-    // Lithuanian invoice format parsing based on user example:
-    // Product: Mocarelos sūrio lazdelės... Kiekis: 5, Unit price: 10.37, Total: 51.85, Discount: 7.78, Final: 44.07
+    // Lithuanian invoice table format - look for structured data in columns
+    // Expected format: Product | Quantity | Unit Price | Total | etc.
     
-    // 1. Extract Kiekis (quantity) - look for number after product or standalone number
-    let kiekisMatch = allText.match(/kiekis[:\s]+(\d+)/i);
-    if (!kiekisMatch) {
-      // Look for standalone numbers (5, 3, 2, etc.) that could be quantities
-      const numbers = allText.match(/\b(\d+)\b/g);
-      if (numbers) {
-        // Filter reasonable quantity numbers (1-50 range)
-        const reasonableQties = numbers.map(n => parseInt(n)).filter(n => n >= 1 && n <= 50);
-        if (reasonableQties.length > 0) {
-          quantity = reasonableQties[0]; // Take first reasonable quantity
-          console.log('📊 Inferred quantity from numbers:', quantity);
+    // 1. Look for quantity in the immediate next lines after product (table structure)
+    const quantityPatterns = [
+      /kiekis[:\s]*(\d+)/i,           // "Kiekis: 5"
+      /^\s*(\d+)\s*$/,                // Standalone number on its own line
+      /\b(\d+)\s+(?=\d+[\.,]\d{2})/   // Number before price patterns
+    ];
+    
+    for (const line of contextLines) {
+      for (const pattern of quantityPatterns) {
+        const match = line.match(pattern);
+        if (match) {
+          const qty = parseInt(match[1]);
+          if (qty >= 1 && qty <= 50) { // Reasonable quantity range
+            quantity = qty;
+            console.log('📊 Found quantity:', quantity, 'from line:', line);
+            break;
+          }
         }
       }
-    } else {
-      quantity = parseInt(kiekisMatch[1]);
-      console.log('📊 Found explicit Kiekis:', quantity);
+      if (quantity > 1) break; // Found quantity, stop looking
     }
     
     // 2. Unit - extract from product name weight specification
@@ -119,48 +125,56 @@ export class TextExtractor {
       unit = 'kg'; // Default for food products
     }
     
-    // 3. Extract unit price - look for price patterns around 10.37 format
-    const unitPricePatterns = [
-      /\b(\d{1,2}[\.,]\d{2})\b/g  // Look for prices like 10.37, 6.93, etc.
-    ];
-    
-    const foundPrices = [];
-    for (const pattern of unitPricePatterns) {
-      const matches = [...allText.matchAll(pattern)];
-      for (const match of matches) {
-        const price = parseFloat(match[1].replace(',', '.'));
-        if (price >= 1 && price <= 100) { // Reasonable unit price range
-          foundPrices.push(price);
+    // 3. Extract unit price - specific to Lithuanian invoice format
+    // Look for the pattern: unit price appears in table structure after quantity
+    const allPrices = [];
+    for (const line of contextLines) {
+      const priceMatches = line.match(/\b(\d{1,2}[\.,]\d{2})\b/g);
+      if (priceMatches) {
+        for (const priceStr of priceMatches) {
+          const price = parseFloat(priceStr.replace(',', '.'));
+          if (price >= 1 && price <= 100) { // Unit price range
+            allPrices.push({ price, line });
+          }
         }
       }
     }
     
-    if (foundPrices.length > 0) {
-      // For your example: should find 10.37, 51.85, 7.78, 44.07
-      // Unit price is typically the smallest reasonable price
-      unitPrice = Math.min(...foundPrices.filter(p => p >= 5)); // Unit prices usually >= 5
-      console.log('💰 Found unit price:', unitPrice, 'from prices:', foundPrices);
-    }
+    console.log('💰 All found prices:', allPrices);
     
-    // 4. Extract total price (SUMA BE PVM) - usually the larger price
-    const totalPatterns = [
-      /suma\s*be\s*pvm[:\s]*(\d+[\.,]\d{2})/i,
-      /(\d{2,3}[\.,]\d{2})/g  // Look for larger amounts like 51.85, 44.07
-    ];
-    
-    const totalMatches = allText.match(/(\d{2,3}[\.,]\d{2})/g);
-    if (totalMatches) {
-      const totals = totalMatches.map(t => parseFloat(t.replace(',', '.')));
-      // Total should be larger than unit price
-      const possibleTotals = totals.filter(t => t > unitPrice && t < 500);
-      if (possibleTotals.length > 0) {
-        totalPrice = Math.min(...possibleTotals); // Take the smaller of large amounts (after discount)
-        console.log('💸 Found total price:', totalPrice, 'from amounts:', totals);
+    // For Mocarelos example: expect to find 10.37 (unit), 51.85 (total before), 7.78 (discount), 44.07 (final)
+    if (allPrices.length > 0) {
+      // Try to identify unit price (should be around 10.37 for your example)
+      const possibleUnitPrices = allPrices.filter(p => p.price >= 6 && p.price <= 25);
+      if (possibleUnitPrices.length > 0) {
+        unitPrice = possibleUnitPrices[0].price;
+        console.log('💰 Selected unit price:', unitPrice, 'from:', possibleUnitPrices);
       }
     }
     
-    // 5. If no total found, calculate it
-    if (totalPrice === 0 && unitPrice > 0) {
+    // 4. Extract final total (SUMA BE PVM after discount)
+    // Look for larger amounts that could be totals
+    const totalPrices = allPrices.filter(p => p.price > unitPrice && p.price >= 20);
+    if (totalPrices.length > 0) {
+      // The final total should be around 44.07 (after discount)
+      // Look for amount that makes sense: quantity × unitPrice - discount
+      const expectedBeforeDiscount = unitPrice * quantity;
+      
+      // Find total closest to expected calculation
+      let bestTotal = totalPrices[0].price;
+      for (const totalOption of totalPrices) {
+        const calculatedDiscount = expectedBeforeDiscount - totalOption.price;
+        if (calculatedDiscount >= 0 && calculatedDiscount <= expectedBeforeDiscount * 0.3) {
+          // Discount should be reasonable (0-30% of original)
+          bestTotal = totalOption.price;
+          discount = calculatedDiscount;
+          break;
+        }
+      }
+      totalPrice = bestTotal;
+      console.log('💸 Selected total price:', totalPrice, 'discount:', discount);
+    } else {
+      // Fallback calculation
       totalPrice = unitPrice * quantity;
     }
     
@@ -213,9 +227,9 @@ export class TextExtractor {
         if (matchRatio > 0.4) { // 40% word match threshold
           console.log(`🎯 Found target product match (${Math.round(matchRatio*100)}%):`, target);
           
-          // Extract quantity, unit, and prices from surrounding lines
-          const contextLines = lines.slice(Math.max(0, i - 2), i + 5);
-          const extractedData = this.extractProductData(target, contextLines);
+          // Extract quantity, unit, and prices from surrounding lines (expanded context)
+          const contextLines = lines.slice(Math.max(0, i - 5), i + 10);
+          const extractedData = this.extractProductData(target, contextLines, lines, i);
           
           foundProducts.push({
             productName: target, // Use the correct target name
