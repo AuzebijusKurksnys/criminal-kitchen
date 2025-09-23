@@ -150,16 +150,19 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
             currency: 'EUR' as const,
             status: 'pending' as const
           },
-          lineItems: parsedData.products.map((product, index) => ({
-            productName: product.productName,
-            description: product.description,
-            quantity: 1,
-            unit: 'vnt',
-            unitPrice: 0,
-            totalPrice: 0,
-            vatRate: 21,
-            needsReview: true
-          })),
+          lineItems: parsedData.products.map((product, index) => {
+            const productData = product as any; // Type assertion for extracted data
+            return {
+              productName: product.productName,
+              description: product.description,
+              quantity: productData.quantity || 1,
+              unit: productData.unit || 'kg',
+              unitPrice: productData.unitPrice || 0,
+              totalPrice: productData.totalPrice || 0,
+              vatRate: 21,
+              needsReview: (productData.unitPrice || 0) === 0 // Only needs review if no price extracted
+            };
+          }),
           matches: {},
           errors: [],
           warnings: ['Extracted using direct PDF text method - please verify quantities and prices'],

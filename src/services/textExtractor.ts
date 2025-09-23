@@ -76,6 +76,83 @@ export class TextExtractor {
     }
   }
 
+  // Extract quantity, unit, and price data for a specific product
+  private static extractProductData(productName: string, contextLines: string[]) {
+    const allText = contextLines.join(' ');
+    console.log('🔍 Extracting data for:', productName.substring(0, 30) + '...', 'from context:', allText.substring(0, 100) + '...');
+    
+    // Extract quantity - look for patterns like "1", "1,5", "4x2.5", "10x1"
+    let quantity = 1;
+    let unit = 'kg';
+    let unitPrice = 0;
+    let totalPrice = 0;
+    
+    // Quantity patterns
+    const qtyPatterns = [
+      /(\d+)[x×](\d+[\.,]\d+)/g,  // 4x2.5, 10x1 
+      /(\d+[\.,]\d+)\s*kg/g,      // 1,5kg, 2.5kg
+      /(\d+)\s*kg/g,              // 1kg, 2kg
+      /(\d+[\.,]\d+)/g,           // 1.5, 2.5
+      /(\d+)/g                    // 1, 2, 3
+    ];
+    
+    for (const pattern of qtyPatterns) {
+      const matches = [...allText.matchAll(pattern)];
+      if (matches.length > 0) {
+        const match = matches[0];
+        if (pattern.source.includes('x')) {
+          // Handle patterns like "4x2.5kg" or "10x1 kg"
+          quantity = parseInt(match[1]) * parseFloat(match[2].replace(',', '.'));
+        } else {
+          quantity = parseFloat(match[1].replace(',', '.'));
+        }
+        console.log('📊 Extracted quantity:', quantity, 'from pattern:', match[0]);
+        break;
+      }
+    }
+    
+    // Unit extraction - default to kg, but check for vnt, l, etc.
+    if (allText.includes('vnt')) unit = 'vnt';
+    else if (allText.includes(' l ') || allText.includes('litrai')) unit = 'l';
+    else unit = 'kg'; // Default for most food products
+    
+    // Price extraction - look for euro amounts
+    const pricePatterns = [
+      /€\s*(\d+[\.,]\d{2})/g,     // €21.55, €10.37
+      /(\d+[\.,]\d{2})\s*€/g,     // 21.55€, 10.37€
+      /(\d+[\.,]\d{2})/g          // 21.55, 10.37 (standalone)
+    ];
+    
+    const prices = [];
+    for (const pattern of pricePatterns) {
+      const matches = [...allText.matchAll(pattern)];
+      for (const match of matches) {
+        const price = parseFloat(match[1].replace(',', '.'));
+        if (price > 0 && price < 1000) { // Reasonable price range
+          prices.push(price);
+        }
+      }
+    }
+    
+    if (prices.length >= 2) {
+      // Typically: unit price, total price
+      unitPrice = Math.min(...prices); // Unit price is usually lower
+      totalPrice = Math.max(...prices); // Total price is usually higher
+    } else if (prices.length === 1) {
+      totalPrice = prices[0];
+      unitPrice = quantity > 0 ? totalPrice / quantity : totalPrice;
+    }
+    
+    console.log('💰 Extracted pricing:', { quantity, unit, unitPrice, totalPrice });
+    
+    return {
+      quantity,
+      unit,
+      unitPrice: Math.round(unitPrice * 100) / 100, // Round to 2 decimals
+      totalPrice: Math.round(totalPrice * 100) / 100
+    };
+  }
+
   // Parse invoice data from extracted text using advanced pattern matching
   static parseInvoiceFromText(text: string) {
     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
@@ -106,11 +183,17 @@ export class TextExtractor {
         
         if (matchRatio > 0.4) { // 40% word match threshold
           console.log(`🎯 Found target product match (${Math.round(matchRatio*100)}%):`, target);
+          
+          // Extract quantity, unit, and prices from surrounding lines
+          const contextLines = lines.slice(Math.max(0, i - 2), i + 5);
+          const extractedData = this.extractProductData(target, contextLines);
+          
           foundProducts.push({
             productName: target, // Use the correct target name
             description: target,
             rawLine: lines.slice(i, i + 3).join(' '),
-            matchRatio
+            matchRatio,
+            ...extractedData
           });
           break; // Found this product, move to next
         }
