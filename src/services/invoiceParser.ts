@@ -135,9 +135,9 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
         products: parsedData.products.map(p => p.productName)
       });
       
-      // If we found products via text extraction, use this method
-      if (parsedData.products.length > 0) {
-        console.log('✅ Using direct PDF text extraction (more accurate than vision OCR)');
+      // Skip broken text extraction - use OpenAI Vision OCR instead
+      if (false && parsedData.products.length > 0) {
+        console.log('⚠️ Skipping broken text extraction - using OpenAI Vision OCR');
         
         // Use the actual parsed data from PDF text extraction
         const correctProducts = parsedData.products.map((product: any) => ({
