@@ -48,9 +48,9 @@ class OpenAIInvoiceProcessor {
       dangerouslyAllowBrowser: true
     });
     
-    // Set model preference order
-    this.preferredModel = 'gpt-4o';
-    this.fallbackModels = ['gpt-4-turbo', 'gpt-4o-mini'];
+    // Set model preference order - testing different models for accuracy
+    this.preferredModel = 'gpt-4-turbo';  // Try turbo instead of gpt-4o
+    this.fallbackModels = ['gpt-4o-mini', 'gpt-4o'];
   }
 
   // Get optimized prompt for each model
@@ -172,6 +172,15 @@ ACCURACY CHECK: Count line items in image vs JSON - they must match exactly!`;
         
         const result = await this.processWithModel(file, model);
         attempts.push({ model, success: true });
+        
+        // Enhanced logging for debugging OCR accuracy
+        console.log(`🔍 Model Performance Debug:`, {
+          model: OPENAI_MODELS[model].name,
+          supplier: result.supplierInfo?.name,
+          lineItemCount: result.lineItems?.length,
+          firstProduct: result.lineItems?.[0]?.productName?.substring(0, 50) + '...',
+          lastProduct: result.lineItems?.[result.lineItems?.length - 1]?.productName?.substring(0, 50) + '...'
+        });
         
         return {
           result,
