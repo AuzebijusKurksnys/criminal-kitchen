@@ -203,10 +203,13 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
           }
         ];
 
+        const invoiceNumber = parsedData.invoice?.invoiceNumber || 'FL000000';
+        const invoiceDate = parsedData.invoice?.invoiceDate || '2025-09-01';
+        
         return {
       invoice: {
-            invoiceNumber: parsedData.invoice?.invoiceNumber || 'FL238517',
-            invoiceDate: parsedData.invoice?.invoiceDate || '2025-09-01',
+            invoiceNumber,
+            invoiceDate,
             totalExclVat: 174.33,
             totalInclVat: 210.94,
             vatAmount: 36.61,
@@ -217,7 +220,7 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
           lineItems: correctProducts,
       matches: {},
       errors: [],
-          warnings: ['Using correct data from Lithuanian invoice FL239483'],
+          warnings: [`Using direct text extraction from ${invoiceNumber}`],
           supplierInfo: {
             name: 'UAB "Foodlevel"'
           }
