@@ -524,22 +524,223 @@ export async function getPreferredSupplierPrice(productId: string): Promise<Supp
   }
 }
 
-// Tech Card operations (skeleton - will implement with complex relationships later)
+export async function getPreferredSupplierPrices(productIds: string[]): Promise<Record<string, SupplierPrice>> {
+  if (productIds.length === 0) {
+    return {};
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('supplier_prices')
+      .select('*')
+      .in('product_id', productIds)
+      .eq('preferred', true);
+
+    if (error) throw error;
+
+    const priceMap: Record<string, SupplierPrice> = {};
+
+    (data || []).forEach((row: any) => {
+      if (!row.product_id) return;
+
+      priceMap[row.product_id] = {
+        id: row.id,
+        productId: row.product_id,
+        supplierId: row.supplier_id,
+        price: Number(row.price),
+        priceExclVat: row.price_excl_vat !== null && row.price_excl_vat !== undefined
+          ? Number(row.price_excl_vat)
+          : Number(row.price),
+        priceInclVat: row.price_incl_vat !== null && row.price_incl_vat !== undefined
+          ? Number(row.price_incl_vat)
+          : Number(row.price),
+        vatRate: row.vat_rate !== null && row.vat_rate !== undefined
+          ? Number(row.vat_rate)
+          : 0,
+        currency: row.currency as SupplierPrice['currency'],
+        lastUpdated: row.last_updated || new Date().toISOString(),
+        preferred: row.preferred ?? true,
+        invoiceId: row.invoice_id || undefined,
+      };
+    });
+
+    return priceMap;
+  } catch (error) {
+    handleSupabaseError(error, 'fetch preferred supplier prices');
+    return {};
+  }
+}
+
+function mapTechCardRow(row: any): TechCard {
+  return {
+    id: row.id,
+    name: row.name,
+    notes: row.notes || undefined,
+    items: (row.tech_card_ingredients || []).map((ingredient: any) => ({
+      productId: ingredient.product_id,
+      nettoQty: Number(ingredient.netto_qty),
+      unit: ingredient.unit,
+      yieldPct: ingredient.yield_pct !== null && ingredient.yield_pct !== undefined
+        ? Number(ingredient.yield_pct)
+        : undefined,
+      notes: ingredient.notes || undefined,
+    })),
+  };
+}
+
+// Tech Card operations
 export async function listTechCards(): Promise<TechCard[]> {
-  return Promise.resolve([]);
+  try {
+    const { data, error } = await supabase
+      .from('tech_cards')
+      .select(`
+        id,
+        name,
+        notes,
+        tech_card_ingredients (
+          id,
+          product_id,
+          netto_qty,
+          unit,
+          yield_pct,
+          notes
+        )
+      `)
+      .order('name', { ascending: true });
+
+    if (error) throw error;
+
+    return (data || []).map(mapTechCardRow);
+  } catch (error) {
+    handleSupabaseError(error, 'list tech cards');
+    return [];
+  }
 }
 
 export async function createTechCard(techCard: Omit<TechCard, 'id'>): Promise<TechCard> {
-  // Placeholder - complex implementation needed for ingredients
-  return Promise.resolve({ id: 'temp', ...techCard });
+  try {
+    const { data: cardData, error: cardError } = await supabase
+      .from('tech_cards')
+      .insert([
+        {
+          name: techCard.name,
+          notes: techCard.notes ?? null,
+        },
+      ])
+      .select()
+      .single();
+
+    if (cardError) throw cardError;
+    if (!cardData) throw new Error('Failed to create tech card');
+
+    const cardId = cardData.id as string;
+
+    if (techCard.items.length > 0) {
+      const ingredientInsert = techCard.items.map((item) => ({
+        tech_card_id: cardId,
+        product_id: item.productId,
+        netto_qty: item.nettoQty,
+        unit: item.unit,
+        yield_pct: item.yieldPct ?? null,
+        notes: item.notes ?? null,
+      }));
+
+      const { error: ingredientsError } = await supabase
+        .from('tech_card_ingredients')
+        .insert(ingredientInsert);
+
+      if (ingredientsError) {
+        // Attempt to clean up the orphaned card before throwing
+        await supabase.from('tech_cards').delete().eq('id', cardId);
+        throw ingredientsError;
+      }
+    }
+
+    return mapTechCardRow({
+      ...cardData,
+      tech_card_ingredients: techCard.items.map((item) => ({
+        product_id: item.productId,
+        netto_qty: item.nettoQty,
+        unit: item.unit,
+        yield_pct: item.yieldPct ?? null,
+        notes: item.notes ?? null,
+      })),
+    });
+  } catch (error) {
+    handleSupabaseError(error, 'create tech card');
+    throw error;
+  }
 }
 
 export async function updateTechCard(techCard: TechCard): Promise<TechCard> {
-  return Promise.resolve(techCard);
+  try {
+    const { data: cardData, error: cardError } = await supabase
+      .from('tech_cards')
+      .update({
+        name: techCard.name,
+        notes: techCard.notes ?? null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', techCard.id)
+      .select()
+      .single();
+
+    if (cardError) throw cardError;
+    if (!cardData) throw new Error('Tech card not found');
+
+    const { error: deleteError } = await supabase
+      .from('tech_card_ingredients')
+      .delete()
+      .eq('tech_card_id', techCard.id);
+
+    if (deleteError) throw deleteError;
+
+    if (techCard.items.length > 0) {
+      const ingredientInsert = techCard.items.map((item) => ({
+        tech_card_id: techCard.id,
+        product_id: item.productId,
+        netto_qty: item.nettoQty,
+        unit: item.unit,
+        yield_pct: item.yieldPct ?? null,
+        notes: item.notes ?? null,
+      }));
+
+      const { error: ingredientsError } = await supabase
+        .from('tech_card_ingredients')
+        .insert(ingredientInsert);
+
+      if (ingredientsError) throw ingredientsError;
+    }
+
+    return mapTechCardRow({
+      ...cardData,
+      tech_card_ingredients: techCard.items.map((item) => ({
+        product_id: item.productId,
+        netto_qty: item.nettoQty,
+        unit: item.unit,
+        yield_pct: item.yieldPct ?? null,
+        notes: item.notes ?? null,
+      })),
+    });
+  } catch (error) {
+    handleSupabaseError(error, 'update tech card');
+    throw error;
+  }
 }
 
-export async function deleteTechCard(_id: string): Promise<boolean> {
-  return Promise.resolve(true);
+export async function deleteTechCard(id: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('tech_cards')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    handleSupabaseError(error, 'delete tech card');
+    return false;
+  }
 }
 
 // Journal operations

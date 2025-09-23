@@ -1,8 +1,9 @@
 
 import type { TechCard, Product } from '../data/types';
+import { useMemo, useEffect, useState } from 'react';
 import { Table, type TableColumn } from '../components/Table';
 import { formatPrice, calculateSuggestedPrice, formatMargin } from '../utils/format';
-import { getRestaurantConfig } from '../data/store';
+import { getRestaurantConfig, getPreferredSupplierPrices } from '../data/store';
 
 interface TechCardListProps {
   techCards: TechCard[];
@@ -12,13 +13,91 @@ interface TechCardListProps {
   loading?: boolean;
 }
 
-export function TechCardList({ techCards, onEdit, onDelete, loading = false }: TechCardListProps) {
-  const restaurantConfig = getRestaurantConfig();
+type TechCardCost = {
+  cost: number;
+  hasAllPrices: boolean;
+};
 
-  const calculateTechCardCost = (_techCard: TechCard): { cost: number; hasAllPrices: boolean } => {
-    // For now, return placeholder values since this requires async supplier price lookup
-    // TODO: Implement proper async cost calculation with supplier prices
-    return { cost: 0, hasAllPrices: false };
+export function TechCardList({ techCards, products, onEdit, onDelete, loading = false }: TechCardListProps) {
+  const restaurantConfig = getRestaurantConfig();
+  const [costs, setCosts] = useState<Record<string, TechCardCost>>({});
+  const [costsLoading, setCostsLoading] = useState(false);
+
+  const productPriceLookup = useMemo(() => {
+    const productIds = new Set<string>();
+    techCards.forEach((techCard) => {
+      techCard.items.forEach((item) => {
+        if (item.productId) {
+          productIds.add(item.productId);
+        }
+      });
+    });
+    return Array.from(productIds);
+  }, [techCards]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadCosts() {
+      if (productPriceLookup.length === 0) {
+        setCosts({});
+        return;
+      }
+
+      setCostsLoading(true);
+
+      try {
+        const priceMap = await getPreferredSupplierPrices(productPriceLookup);
+
+        if (!isMounted) return;
+
+        const nextCosts: Record<string, TechCardCost> = {};
+
+        techCards.forEach((techCard) => {
+          let cost = 0;
+          let hasAllPrices = techCard.items.length > 0;
+
+          techCard.items.forEach((item) => {
+            if (!item.productId) {
+              hasAllPrices = false;
+              return;
+            }
+
+            const priceEntry = priceMap[item.productId];
+
+            if (!priceEntry) {
+              hasAllPrices = false;
+              return;
+            }
+
+            const yieldMultiplier = item.yieldPct ?? 1;
+            const adjustedQty = item.nettoQty / Math.max(yieldMultiplier, 0.000001);
+
+            cost += adjustedQty * priceEntry.priceExclVat;
+          });
+
+          nextCosts[techCard.id] = { cost, hasAllPrices };
+        });
+
+        setCosts(nextCosts);
+      } catch (error) {
+        console.error('Error calculating tech card costs:', error);
+      } finally {
+        if (isMounted) {
+          setCostsLoading(false);
+        }
+      }
+    }
+
+    loadCosts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [productPriceLookup, techCards]);
+
+  const calculateTechCardCost = (techCard: TechCard): TechCardCost => {
+    return costs[techCard.id] || { cost: 0, hasAllPrices: false };
   };
 
   const columns: TableColumn<TechCard>[] = [
@@ -150,7 +229,7 @@ export function TechCardList({ techCards, onEdit, onDelete, loading = false }: T
         data={techCards}
         columns={columns}
         keyExtractor={(techCard) => techCard.id}
-        loading={loading}
+        loading={loading || costsLoading}
         emptyMessage="No tech cards found. Create your first recipe to get started."
       />
     </div>
