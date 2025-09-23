@@ -64,18 +64,22 @@ CRITICAL: This may be a low-quality smartphone photo with poor lighting, blur, o
 
 ADVANCED INSTRUCTIONS FOR GPT-4O:
 - Use your enhanced vision capabilities for complex layouts
-- Pay special attention to rotated/skewed text
-- Handle multiple languages if present
+- Pay special attention to rotated/skewed text  
+- Handle multiple languages (especially Lithuanian) if present
 - Extract data from tables with irregular formatting
-- Identify handwritten notes or annotations`,
+- Read each line item row systematically from top to bottom
+- Do NOT translate foreign language product names to English
+- If text is partially obscured, transcribe visible characters exactly`,
 
       'gpt-4-turbo': `${basePrompt}
 
 OPTIMIZED FOR SPEED AND ACCURACY:
 - Focus on standard invoice layouts
 - Prioritize clearly printed text
-- Extract line items in table format
-- Ensure consistent number formatting`,
+- Extract line items in table format systematically
+- Ensure consistent number formatting
+- Read product names exactly as written - no interpretation
+- Count total line items to ensure none are missed`,
 
       'gpt-4o-mini': `${basePrompt}
 
@@ -83,16 +87,28 @@ FAST AND EFFICIENT MODE:
 - Focus on core invoice information
 - Use conservative approach for unclear text
 - Double-check numerical values
-- Maintain consistent data structure`
+- Maintain consistent data structure
+- Extract ALL line items without skipping any
+- Copy product names character-by-character if needed`
     };
 
     return modelSpecificPrompts[model] + `
+
+INVOICE LINE ITEM EXTRACTION - CRITICAL ACCURACY REQUIRED:
+
+When extracting product names from line items:
+1. Read EACH line carefully and completely
+2. Copy the EXACT product name as written (don't translate or interpret)
+3. Do NOT skip any line items - extract ALL products listed
+4. Do NOT create duplicate entries unless they actually appear twice
+5. Do NOT guess or hallucinate product names
+6. If text is unclear, copy what you can see character by character
 
 Extract and return ONLY a valid JSON object with this exact structure:
 {
   "supplier": {
     "name": "Company Name",
-    "address": "Full address or partial if available",
+    "address": "Full address or partial if available", 
     "email": "email if found",
     "phone": "phone if found"
   },
@@ -110,7 +126,7 @@ Extract and return ONLY a valid JSON object with this exact structure:
   },
   "lineItems": [
     {
-      "description": "Product/service name and details",
+      "description": "EXACT product name as written on invoice - DO NOT translate, interpret, or modify",
       "quantity": 1.0,
       "unit": "kg/pcs/l/etc",
       "unitPrice": 0.00,
@@ -120,14 +136,20 @@ Extract and return ONLY a valid JSON object with this exact structure:
   ]
 }
 
-CRITICAL RULES:
+ULTRA-CRITICAL EXTRACTION RULES:
 - Return ONLY valid JSON, no explanations
-- Use 0.00 for unclear/missing amounts
+- EXTRACT ALL LINE ITEMS - do not skip any products
+- Product names: Copy EXACTLY as written, preserve all characters, punctuation, accents
+- Do NOT translate Lithuanian/foreign text to English
+- Do NOT interpret or guess product names - copy what you see
+- If multiple similar items exist, they are separate line items
+- Use 0.00 for unclear/missing amounts only
 - Convert all numbers to decimals (use . not ,)
-- If text is unclear, use your best interpretation
-- For quantities/prices: extract numbers carefully, ignore currency symbols
+- Quantities/prices: extract numbers carefully, ignore currency symbols  
 - Dates: convert to YYYY-MM-DD format (guess year if needed)
-- Units: normalize to standard units (kg, pcs, l, m, etc.)`;
+- Units: normalize to standard units (kg, pcs, l, m, etc.)
+
+ACCURACY CHECK: Count line items in image vs JSON - they must match exactly!`;
   }
 
   // Try multiple models with intelligent fallback
