@@ -97,14 +97,16 @@ FAST AND EFFICIENT MODE:
 INVOICE LINE ITEM EXTRACTION - CRITICAL ACCURACY REQUIRED:
 
 When extracting product names from line items:
-1. Read EACH line carefully and completely - NEVER truncate product names
-2. Copy the COMPLETE product name as written (don't translate or interpret)
-3. Do NOT skip any line items - extract ALL products listed
-4. Do NOT create duplicate entries unless they actually appear twice
-5. Do NOT guess or hallucinate product names
-6. If text is unclear, copy what you can see character by character
-7. CRITICAL: Product names can be very long - copy the ENTIRE description including all specifications, weights, and details
-8. DO NOT abbreviate or shorten product names - copy them in their COMPLETE form
+1. READ THE TABLE CAREFULLY - Count the actual rows and extract exactly that many products
+2. Read EACH line carefully and completely - NEVER truncate product names
+3. Copy the COMPLETE product name as written (don't translate or interpret)
+4. Do NOT skip any line items - extract ALL products listed
+5. Do NOT create duplicate entries unless they actually appear twice
+6. Do NOT guess or hallucinate product names
+7. CRITICAL: Look at the table structure - if there are 3 rows, extract exactly 3 products
+8. If text is unclear, copy what you can see character by character
+9. CRITICAL: Product names can be very long - copy the ENTIRE description including all specifications, weights, and details
+10. DO NOT abbreviate or shorten product names - copy them in their COMPLETE form
 
 Extract and return ONLY a valid JSON object with this exact structure:
 {
@@ -140,21 +142,25 @@ Extract and return ONLY a valid JSON object with this exact structure:
 
 ULTRA-CRITICAL EXTRACTION RULES:
 - Return ONLY valid JSON, no explanations
-- EXTRACT ALL LINE ITEMS - do not skip any products
+- EXTRACT ONLY THE ACTUAL LINE ITEMS - do not create phantom/duplicate products
+- COUNT THE TABLE ROWS CAREFULLY - extract exactly the number of products shown
 - Product names: Copy EXACTLY as written, preserve all characters, punctuation, accents - NEVER TRUNCATE
 - COMPLETE PRODUCT DESCRIPTIONS: Copy the FULL text for each product including all details, specifications, weights, and brand names
 - Do NOT translate Lithuanian/foreign text to English
-- Do NOT interpret or guess product names - copy what you see
+- Do NOT interpret or guess product names - copy what you see character-by-character
 - Do NOT abbreviate or shorten any part of product names
-- If multiple similar items exist, they are separate line items
+- Do NOT hallucinate or invent products that aren't clearly visible in the table
 - Use 0.00 for unclear/missing amounts only
 - Convert all numbers to decimals (use . not ,)
 - Quantities/prices: extract numbers carefully, ignore currency symbols  
 - Dates: convert to YYYY-MM-DD format (guess year if needed)
 - Units: normalize to standard units (kg, pcs, l, m, etc.)
 
-ACCURACY CHECK: Count line items in image vs JSON - they must match exactly!
-TEXT COMPLETENESS CHECK: Ensure no product names are cut off or abbreviated!`;
+MANDATORY VERIFICATION STEPS:
+1. Count table rows in the image - extract exactly that many line items, no more, no less
+2. Read each product name from start to finish - copy the complete text
+3. Verify quantities and prices match what's shown in the table
+4. Double-check you haven't created duplicate or phantom products`;
   }
 
   // Try multiple models with intelligent fallback
