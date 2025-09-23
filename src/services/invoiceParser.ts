@@ -5,6 +5,7 @@ import { createAzureDocumentIntelligenceService, isAzureDocumentIntelligenceAvai
 import { openaiInvoiceProcessor, isOpenAIAvailable } from './openaiModels';
 import { pdfProcessor } from './pdfProcessor';
 import PDFProcessor from './pdfProcessor';
+import { TextExtractor } from './textExtractor';
 
 // OpenAI client - legacy support (now handled by openaiModels.ts)
 const openaiClient = new OpenAI({
@@ -114,10 +115,10 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
 }> {
   const processingInfo: any = {};
   
-  // Handle PDF files - convert to image first
+  // Handle PDF files - try direct text extraction first (much more accurate)
   let processedFile = file;
   if (PDFProcessor.isPDFFile(file)) {
-    console.log('📄 PDF file detected, converting to image...');
+    console.log('📄 PDF file detected, trying direct text extraction first...');
     
     const validation = PDFProcessor.validatePDFFile(file);
     if (!validation.valid) {
@@ -125,6 +126,55 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
     }
     
     try {
+      // Try direct text extraction first
+      const extractedText = await TextExtractor.extractTextFromPDF(file);
+      const parsedData = TextExtractor.parseInvoiceFromText(extractedText);
+      
+      console.log('📝 Direct text extraction results:', {
+        productCount: parsedData.products.length,
+        products: parsedData.products.map(p => p.productName)
+      });
+      
+      // If we found products via text extraction, use this method
+      if (parsedData.products.length > 0) {
+        console.log('✅ Using direct PDF text extraction (more accurate than vision OCR)');
+        
+        return {
+          invoice: {
+            invoiceNumber: 'EXTRACTED_FROM_TEXT',
+            invoiceDate: new Date().toISOString(),
+            totalExclVat: 0,
+            totalInclVat: 0,
+            vatAmount: 0,
+            discountAmount: 0,
+            currency: 'EUR' as const,
+            status: 'pending' as const
+          },
+          lineItems: parsedData.products.map((product, index) => ({
+            productName: product.productName,
+            description: product.description,
+            quantity: 1,
+            unit: 'vnt',
+            unitPrice: 0,
+            totalPrice: 0,
+            vatRate: 21,
+            needsReview: true
+          })),
+          matches: {},
+          errors: [],
+          warnings: ['Extracted using direct PDF text method - please verify quantities and prices'],
+          supplierInfo: {
+            name: 'Text Extracted Supplier'
+          }
+        };
+      }
+    } catch (error) {
+      console.warn('📄 Direct text extraction failed, falling back to image conversion:', error);
+    }
+    
+    // Fallback to image conversion for vision OCR
+    try {
+      console.log('🔄 Converting PDF to image for OCR...');
       processedFile = await processPDFFile(file);
       processingInfo.pdfProcessed = true;
     } catch (error) {
