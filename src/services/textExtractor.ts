@@ -43,37 +43,115 @@ export class TextExtractor {
     }
   }
 
-  // Parse invoice data from extracted text using pattern matching
+  // Parse invoice data from extracted text using advanced pattern matching
   static parseInvoiceFromText(text: string) {
     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     
-    console.log('📝 Processing text lines:', lines.slice(0, 20));
+    console.log('📝 Processing text lines (first 30):', lines.slice(0, 30));
     
-    // Look for Lithuanian product patterns
-    const productPatterns = [
+    // More comprehensive Lithuanian product patterns
+    const productIndicators = [
+      // Dairy products
       /sūrio.*lazdelės/i,
-      /kiaulienos.*šoninė/i, 
-      /viščiukų.*broilerių.*filė/i,
+      /mocarelos/i,
+      
+      // Meat products  
+      /kiaulienos.*šoninė/i,
+      /viščiukų.*broilerių/i,
+      /broilerių.*filė/i,
+      
+      // Frozen products
       /bulvės.*dippers/i,
+      /lamb.*weston/i,
+      
+      // Snacks
       /sūrio.*čili.*pipirų/i,
-      /krevetės.*torpedo/i
+      /užkanda/i,
+      
+      // Seafood
+      /krevetės.*torpedo/i,
+      /litopenaeus.*vannamei/i,
+      
+      // General patterns
+      /šaldytos/i,
+      /atšaldyta/i,
+      /vakuume/i,
+      /kg[,\s]/i,
+      /x\d+[\.,]\d+/i  // Pattern like 4x2.5kg
     ];
     
     const products = [];
+    let currentProduct = '';
     
-    for (const line of lines) {
-      // Check if line contains product patterns
-      const hasProduct = productPatterns.some(pattern => pattern.test(line));
+    // Multi-line product detection
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
       
-      if (hasProduct) {
-        console.log('🎯 Found potential product line:', line);
-        products.push({
-          productName: line,
-          description: line,
-          rawLine: line
-        });
+      // Skip obvious non-product lines
+      if (line.match(/^\d+$/) || 
+          line.match(/^[A-Z]{2,}\s*\d/) || 
+          line.length < 10 ||
+          line.match(/^(PVM|VAT|Total|Suma)/i)) {
+        continue;
+      }
+      
+      // Check if this line contains product indicators
+      const hasProductIndicator = productIndicators.some(pattern => pattern.test(line));
+      
+      if (hasProductIndicator) {
+        // Start or continue building product name
+        if (currentProduct) {
+          currentProduct += ' ' + line;
+        } else {
+          currentProduct = line;
+        }
+        
+        // Check if we have a complete product (ends with weight/package info)
+        const isComplete = line.match(/(kg|vnt|l)[,\s]*(\(.*\))?\s*$/i) || 
+                          line.match(/šaldytos?\s*$/i) || 
+                          line.match(/atšaldyta\s*$/i);
+        
+        if (isComplete && currentProduct) {
+          console.log('🎯 Found complete product:', currentProduct);
+          products.push({
+            productName: currentProduct.trim(),
+            description: currentProduct.trim(),
+            rawLine: currentProduct.trim()
+          });
+          currentProduct = '';
+        }
+      } else if (currentProduct) {
+        // Continue building multi-line product name
+        currentProduct += ' ' + line;
+        
+        // Check if this completes the product
+        const isComplete = line.match(/(kg|vnt|l)[,\s]*(\(.*\))?\s*$/i) || 
+                          line.match(/šaldytos?\s*$/i) || 
+                          line.match(/atšaldyta\s*$/i);
+        
+        if (isComplete) {
+          console.log('🎯 Found multi-line product:', currentProduct);
+          products.push({
+            productName: currentProduct.trim(),
+            description: currentProduct.trim(),
+            rawLine: currentProduct.trim()
+          });
+          currentProduct = '';
+        }
       }
     }
+    
+    // Add any remaining product
+    if (currentProduct) {
+      console.log('🎯 Found final product:', currentProduct);
+      products.push({
+        productName: currentProduct.trim(),
+        description: currentProduct.trim(),
+        rawLine: currentProduct.trim()
+      });
+    }
+    
+    console.log(`📊 Text extraction found ${products.length} products`);
     
     return {
       products,
