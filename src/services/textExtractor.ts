@@ -80,38 +80,54 @@ export class TextExtractor {
   private static extractProductData(productName: string, contextLines: string[], allLines: string[], productIndex: number) {
     const allText = contextLines.join(' ');
     console.log('🔍 Extracting data for:', productName.substring(0, 30) + '...');
-    console.log('📋 Context lines:', contextLines);
-    console.log('📄 Raw context text:', allText);
+    
+    // Parse the table structure - look for the specific row for this product
+    // Format: Nr | Product | Country | Quantity | Unit | UnitPrice | Total | Discount | FinalTotal | Date
     
     let quantity = 1;
     let unit = 'kg';
     let unitPrice = 0;
     let totalPrice = 0;
-    let discount = 0;
     
-    // Lithuanian invoice table format - look for structured data in columns
-    // Expected format: Product | Quantity | Unit Price | Total | etc.
+    // Find the row number for this product (1, 2, 3, etc.)
+    const productRowMatch = allText.match(new RegExp(`(\\d+)\\s+\\d*\\s*[A-Za-z]*\\s*\\d*\\s*${productName.split(',')[0].substring(0, 20)}`, 'i'));
     
-    // 1. Look for quantity in the immediate next lines after product (table structure)
-    const quantityPatterns = [
-      /kiekis[:\s]*(\d+)/i,           // "Kiekis: 5"
-      /^\s*(\d+)\s*$/,                // Standalone number on its own line
-      /\b(\d+)\s+(?=\d+[\.,]\d{2})/   // Number before price patterns
-    ];
-    
-    for (const line of contextLines) {
-      for (const pattern of quantityPatterns) {
-        const match = line.match(pattern);
-        if (match) {
-          const qty = parseInt(match[1]);
-          if (qty >= 1 && qty <= 50) { // Reasonable quantity range
-            quantity = qty;
-            console.log('📊 Found quantity:', quantity, 'from line:', line);
-            break;
-          }
+    if (productRowMatch) {
+      const rowNumber = parseInt(productRowMatch[1]);
+      console.log('📍 Found product in row:', rowNumber);
+      
+      // Look for the specific row data pattern
+      // Example: "1 87162760003 Netherlan 17 Mocarelos sūrio lazdelės džiūvėsėliuose, 1kg, šaldytos ds 5 kg 10,3700 51,85 7,78 44,07 2026-10-02"
+      const rowPattern = new RegExp(`${rowNumber}\\s+\\d*\\s*[A-Za-z]*\\s*\\d*\\s*${productName.split(',')[0].substring(0, 15)}.*?ds\\s+(\\d+[\.,]?\\d*)\\s+kg\\s+(\\d+[\.,]\\d+)\\s+(\\d+[\.,]\\d+)\\s+(\\d+[\.,]\\d+)\\s+(\\d+[\.,]\\d+)`, 'i');
+      
+      const rowMatch = allText.match(rowPattern);
+      
+      if (rowMatch) {
+        quantity = parseFloat(rowMatch[1].replace(',', '.'));
+        unitPrice = parseFloat(rowMatch[2].replace(',', '.'));
+        const totalBeforeDiscount = parseFloat(rowMatch[3].replace(',', '.'));
+        const discount = parseFloat(rowMatch[4].replace(',', '.'));
+        totalPrice = parseFloat(rowMatch[5].replace(',', '.'));
+        
+        console.log('📊 Parsed table row data:', {
+          quantity,
+          unitPrice, 
+          totalBeforeDiscount,
+          discount,
+          finalTotal: totalPrice,
+          calculation: `${quantity} × ${unitPrice} = ${totalBeforeDiscount}, minus ${discount} = ${totalPrice}`
+        });
+      } else {
+        console.warn('⚠️ Could not parse table row for:', productName.substring(0, 30));
+        // Fallback to simpler extraction
+        const simpleQtyMatch = allText.match(new RegExp(`${productName.split(',')[0].substring(0, 15)}.*?(\\d+)\\s+kg\\s+(\\d+[\.,]\\d+)`, 'i'));
+        if (simpleQtyMatch) {
+          quantity = parseInt(simpleQtyMatch[1]);
+          unitPrice = parseFloat(simpleQtyMatch[2].replace(',', '.'));
+          totalPrice = unitPrice * quantity;
+          console.log('📊 Fallback extraction:', { quantity, unitPrice, totalPrice });
         }
       }
-      if (quantity > 1) break; // Found quantity, stop looking
     }
     
     // 2. Unit - extract from product name weight specification
@@ -125,74 +141,18 @@ export class TextExtractor {
       unit = 'kg'; // Default for food products
     }
     
-    // 3. Extract unit price - specific to Lithuanian invoice format
-    // Look for the pattern: unit price appears in table structure after quantity
-    const allPrices = [];
-    for (const line of contextLines) {
-      const priceMatches = line.match(/\b(\d{1,2}[\.,]\d{2})\b/g);
-      if (priceMatches) {
-        for (const priceStr of priceMatches) {
-          const price = parseFloat(priceStr.replace(',', '.'));
-          if (price >= 1 && price <= 100) { // Unit price range
-            allPrices.push({ price, line });
-          }
-        }
-      }
-    }
-    
-    console.log('💰 All found prices:', allPrices);
-    
-    // For Mocarelos example: expect to find 10.37 (unit), 51.85 (total before), 7.78 (discount), 44.07 (final)
-    if (allPrices.length > 0) {
-      // Try to identify unit price (should be around 10.37 for your example)
-      const possibleUnitPrices = allPrices.filter(p => p.price >= 6 && p.price <= 25);
-      if (possibleUnitPrices.length > 0) {
-        unitPrice = possibleUnitPrices[0].price;
-        console.log('💰 Selected unit price:', unitPrice, 'from:', possibleUnitPrices);
-      }
-    }
-    
-    // 4. Extract final total (SUMA BE PVM after discount)
-    // Look for larger amounts that could be totals
-    const totalPrices = allPrices.filter(p => p.price > unitPrice && p.price >= 20);
-    if (totalPrices.length > 0) {
-      // The final total should be around 44.07 (after discount)
-      // Look for amount that makes sense: quantity × unitPrice - discount
-      const expectedBeforeDiscount = unitPrice * quantity;
-      
-      // Find total closest to expected calculation
-      let bestTotal = totalPrices[0].price;
-      for (const totalOption of totalPrices) {
-        const calculatedDiscount = expectedBeforeDiscount - totalOption.price;
-        if (calculatedDiscount >= 0 && calculatedDiscount <= expectedBeforeDiscount * 0.3) {
-          // Discount should be reasonable (0-30% of original)
-          bestTotal = totalOption.price;
-          discount = calculatedDiscount;
-          break;
-        }
-      }
-      totalPrice = bestTotal;
-      console.log('💸 Selected total price:', totalPrice, 'discount:', discount);
-    } else {
-      // Fallback calculation
-      totalPrice = unitPrice * quantity;
-    }
-    
-    console.log('💰 Extracted complete pricing:', { 
+    console.log('💰 Final extracted data:', { 
       quantity, 
       unit, 
       unitPrice, 
-      totalPrice, 
-      discount,
-      calculation: `${unitPrice} × ${quantity} - ${discount} = ${totalPrice}`
+      totalPrice
     });
     
     return {
       quantity,
       unit,
       unitPrice: Math.round(unitPrice * 100) / 100,
-      totalPrice: Math.round(totalPrice * 100) / 100,
-      discount: Math.round(discount * 100) / 100
+      totalPrice: Math.round(totalPrice * 100) / 100
     };
   }
 
