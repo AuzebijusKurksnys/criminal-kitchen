@@ -7,7 +7,7 @@ export const OPENAI_MODELS = {
   'gpt-4o': {
     name: 'GPT-4o Vision',
     description: 'Latest vision model - best for complex invoices',
-    maxTokens: 6000,
+    maxTokens: 16000,
     temperature: 0.1,
     strengths: ['complex layouts', 'poor quality images', 'multi-language'],
     costPer1kTokens: 0.005
@@ -15,7 +15,7 @@ export const OPENAI_MODELS = {
   'gpt-4-turbo': {
     name: 'GPT-4 Turbo Vision', 
     description: 'Faster processing - good for standard invoices',
-    maxTokens: 4000,
+    maxTokens: 12000,
     temperature: 0.0,
     strengths: ['speed', 'standard layouts', 'consistent formatting'],
     costPer1kTokens: 0.003
@@ -23,7 +23,7 @@ export const OPENAI_MODELS = {
   'gpt-4o-mini': {
     name: 'GPT-4o Mini',
     description: 'Fast and cost-effective fallback option',
-    maxTokens: 4000,
+    maxTokens: 8000,
     temperature: 0.0,
     strengths: ['speed', 'cost-effective', 'reliability'],
     costPer1kTokens: 0.00015
@@ -97,12 +97,14 @@ FAST AND EFFICIENT MODE:
 INVOICE LINE ITEM EXTRACTION - CRITICAL ACCURACY REQUIRED:
 
 When extracting product names from line items:
-1. Read EACH line carefully and completely
-2. Copy the EXACT product name as written (don't translate or interpret)
+1. Read EACH line carefully and completely - NEVER truncate product names
+2. Copy the COMPLETE product name as written (don't translate or interpret)
 3. Do NOT skip any line items - extract ALL products listed
 4. Do NOT create duplicate entries unless they actually appear twice
 5. Do NOT guess or hallucinate product names
 6. If text is unclear, copy what you can see character by character
+7. CRITICAL: Product names can be very long - copy the ENTIRE description including all specifications, weights, and details
+8. DO NOT abbreviate or shorten product names - copy them in their COMPLETE form
 
 Extract and return ONLY a valid JSON object with this exact structure:
 {
@@ -126,7 +128,7 @@ Extract and return ONLY a valid JSON object with this exact structure:
   },
   "lineItems": [
     {
-      "description": "EXACT product name as written on invoice - DO NOT translate, interpret, or modify",
+      "description": "COMPLETE product name as written on invoice - copy the ENTIRE text including all specifications, weights, and details. DO NOT truncate, translate, interpret, or modify",
       "quantity": 1.0,
       "unit": "kg/pcs/l/etc",
       "unitPrice": 0.00,
@@ -139,9 +141,11 @@ Extract and return ONLY a valid JSON object with this exact structure:
 ULTRA-CRITICAL EXTRACTION RULES:
 - Return ONLY valid JSON, no explanations
 - EXTRACT ALL LINE ITEMS - do not skip any products
-- Product names: Copy EXACTLY as written, preserve all characters, punctuation, accents
+- Product names: Copy EXACTLY as written, preserve all characters, punctuation, accents - NEVER TRUNCATE
+- COMPLETE PRODUCT DESCRIPTIONS: Copy the FULL text for each product including all details, specifications, weights, and brand names
 - Do NOT translate Lithuanian/foreign text to English
 - Do NOT interpret or guess product names - copy what you see
+- Do NOT abbreviate or shorten any part of product names
 - If multiple similar items exist, they are separate line items
 - Use 0.00 for unclear/missing amounts only
 - Convert all numbers to decimals (use . not ,)
@@ -149,7 +153,8 @@ ULTRA-CRITICAL EXTRACTION RULES:
 - Dates: convert to YYYY-MM-DD format (guess year if needed)
 - Units: normalize to standard units (kg, pcs, l, m, etc.)
 
-ACCURACY CHECK: Count line items in image vs JSON - they must match exactly!`;
+ACCURACY CHECK: Count line items in image vs JSON - they must match exactly!
+TEXT COMPLETENESS CHECK: Ensure no product names are cut off or abbreviated!`;
   }
 
   // Try multiple models with intelligent fallback
