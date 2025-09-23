@@ -28,6 +28,7 @@ import { generateId, generateTimestamp } from '../utils/id';
 interface LocationState {
   extractedData: InvoiceProcessingResult;
   file: File;
+  cacheKey?: number; // used to force remount on fresh upload
 }
 
 export function InvoiceReviewPage() {
@@ -56,7 +57,7 @@ export function InvoiceReviewPage() {
     setEditedData(state.extractedData); // Initialize edited data
     setFile(state.file);
     loadData();
-  }, [state, navigate]);
+  }, [state?.cacheKey, navigate]);
 
   const loadData = async () => {
     try {

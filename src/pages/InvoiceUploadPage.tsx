@@ -39,11 +39,12 @@ export function InvoiceUploadPage() {
     try {
       const result = await extractInvoiceData(selectedFile);
       
-      // Navigate to review page with extracted data
+      // Navigate to review page with a cache-buster so stale state is never reused
       navigate('/invoices/review', { 
         state: { 
           extractedData: result,
-          file: selectedFile 
+          file: selectedFile,
+          cacheKey: Date.now() 
         } 
       });
       
