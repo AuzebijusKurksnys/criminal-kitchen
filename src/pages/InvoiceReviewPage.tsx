@@ -46,6 +46,7 @@ export function InvoiceReviewPage() {
   const [selectedMatches, setSelectedMatches] = useState<{ [lineItemIndex: number]: string }>({});
   const [editingItems, setEditingItems] = useState<{ [lineItemIndex: number]: boolean }>({});
   const [editedData, setEditedData] = useState<InvoiceProcessingResult | null>(null);
+  const [mismatchWarning, setMismatchWarning] = useState<string | null>(null);
 
   useEffect(() => {
     if (!state?.extractedData || !state?.file) {
@@ -56,6 +57,17 @@ export function InvoiceReviewPage() {
     setExtractedData(state.extractedData);
     setEditedData(state.extractedData); // Initialize edited data
     setFile(state.file);
+
+    // Simple sanity check: warn if extracted invoice number does not appear in filename
+    try {
+      const fileName = state.file.name || '';
+      const invNo = state.extractedData.invoice?.invoiceNumber || '';
+      if (fileName && invNo && !fileName.includes(invNo)) {
+        setMismatchWarning(`Possible mismatch: file “${fileName}” vs extracted invoice “${invNo}”. Try re-upload if unexpected.`);
+      } else {
+        setMismatchWarning(null);
+      }
+    } catch {}
     loadData();
   }, [state?.cacheKey, navigate]);
 
