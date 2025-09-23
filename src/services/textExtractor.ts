@@ -78,71 +78,20 @@ export class TextExtractor {
 
   // Extract quantity, unit, and price data for a specific product (Lithuanian invoice format)
   private static extractProductData(productName: string, contextLines: string[], allLines: string[], productIndex: number) {
-    const allText = contextLines.join(' ');
-    console.log('🔍 Extracting data for:', productName.substring(0, 30) + '...');
-    
-    // Parse the table structure - look for the specific row for this product
-    // Format: Nr | Product | Country | Quantity | Unit | UnitPrice | Total | Discount | FinalTotal | Date
-    
-    let quantity = 1;
-    let unit = 'kg';
-    let unitPrice = 0;
-    let totalPrice = 0;
-    
-    // Simple approach: just use the correct values based on your data
-    // From console log, I can see the exact values for each product
-    
-    if (productName.includes('Mocarelos')) {
-      quantity = 5;
-      unitPrice = 10.37;
-      totalPrice = 44.07;
-      console.log('📊 Using correct Mocarelos data: 5kg × 10.37 = 44.07');
-    } else if (productName.includes('Kiaulienos')) {
-      quantity = 3.108;
-      unitPrice = 6.90;
-      totalPrice = 21.45;
-      console.log('📊 Using correct Kiaulienos data: 3.108kg × 6.90 = 21.45');
-    } else if (productName.includes('Viščiukų')) {
-      quantity = 5;
-      unitPrice = 6.30;
-      totalPrice = 29.93;
-      console.log('📊 Using correct Viščiukų data: 5kg × 6.30 = 29.93');
-    } else if (productName.includes('Bulvės')) {
-      quantity = 4;
-      unitPrice = 6.40;
-      totalPrice = 21.76;
-      unit = 'vnt'; // Bulvės are sold by unit
-      console.log('📊 Using correct Bulvės data: 4vnt × 6.40 = 21.76');
-    } else if (productName.includes('Sūrio-čili')) {
-      quantity = 5;
-      unitPrice = 8.84;
-      totalPrice = 37.57;
-      console.log('📊 Using correct Sūrio-čili data: 5kg × 8.84 = 37.57');
-    } else if (productName.includes('Krevetės')) {
-      quantity = 2;
-      unitPrice = 11.50;
-      totalPrice = 19.55;
-      console.log('📊 Using correct Krevetės data: 2kg × 11.50 = 19.55');
-    }
-    
-    // 2. Unit - extract from product name weight specification
-    const weightMatch = productName.match(/(\d+[\.,]?\d*)\s*kg/i);
-    if (weightMatch) {
-      // Product specifies weight per unit (e.g., "1kg", "1,5kg", "4x2.5kg")
-      unit = 'kg';
-      const kgPerUnit = parseFloat(weightMatch[1].replace(',', '.'));
-      console.log('📏 Weight per unit from product name:', kgPerUnit, 'kg');
-    } else {
-      unit = 'kg'; // Default for food products
-    }
-    
-    console.log('💰 Final extracted data:', { 
-      quantity, 
-      unit, 
-      unitPrice, 
-      totalPrice
-    });
-    
+    // Heuristic parsing based on table column order near the product line
+    // Look ahead a few lines for numeric patterns: quantity, unit, unit price, total
+    const window = contextLines.join(' ').replace(/,/g, '.');
+
+    // Quantity: a number near the product, prefer small numbers like 2, 2.5, 5, 20
+    const qtyMatch = window.match(/\b(\d{1,3}(?:\.\d{1,3})?)\s*(kg|vnt|pcs|l)\b/i);
+    const unit = (qtyMatch?.[2] || 'kg').toLowerCase();
+    const quantity = qtyMatch ? parseFloat(qtyMatch[1]) : 1;
+
+    // Unit price: look for price-like number with 2 decimals preceding total
+    const priceCandidates = window.match(/\b(\d{1,3}\.\d{2})\b/g) || [];
+    const unitPrice = priceCandidates.length > 0 ? parseFloat(priceCandidates[0]) : 0;
+    const totalPrice = priceCandidates.length > 1 ? parseFloat(priceCandidates[1]) : unitPrice * quantity;
+
     return {
       quantity,
       unit,
@@ -157,57 +106,7 @@ export class TextExtractor {
     
     console.log('📝 Processing text lines (first 30):', lines.slice(0, 30));
     
-    // First try to find exact target products (for this specific invoice)
-    const targetProducts = [
-      'Mocarelos sūrio lazdelės džiūvėsėliuose, 1kg, šaldytos',
-      'Kiaulienos šoninė karštai rūkyta, pjaustyta, 1,5kg+, vakuume, atšaldyta', 
-      'Viščiukų.broilerių filė, 4x2.5kg, šaldyta',
-      'Bulvės „Dippers" 4x2,5 kg, Lamb Weston, šaldytos',
-      'Sūrio-čili pipirų užkanda, 1 kg, šaldyta',
-      'Krevetės džiūvėsėliuose „Torpedo" (torpedos formos), 10x1 kg, šaldytos (Litopenaeus Vannamei)'
-    ];
-    
-    const foundProducts = [];
-    
-    // Try to match target products with fuzzy matching
-    for (const target of targetProducts) {
-      const words = target.toLowerCase().split(/[\s,]+/).filter(w => w.length > 2);
-      
-      for (let i = 0; i < lines.length; i++) {
-        const lineGroup = lines.slice(i, i + 3).join(' ').toLowerCase(); // Check 3-line groups
-        
-        const matchCount = words.filter(word => lineGroup.includes(word)).length;
-        const matchRatio = matchCount / words.length;
-        
-        if (matchRatio > 0.4) { // 40% word match threshold
-          console.log(`🎯 Found target product match (${Math.round(matchRatio*100)}%):`, target);
-          
-          // Extract quantity, unit, and prices from surrounding lines (expanded context)
-          const contextLines = lines.slice(Math.max(0, i - 5), i + 10);
-          const extractedData = this.extractProductData(target, contextLines, lines, i);
-          
-          foundProducts.push({
-            productName: target, // Use the correct target name
-            description: target,
-            rawLine: lines.slice(i, i + 3).join(' '),
-            matchRatio,
-            ...extractedData
-          });
-          break; // Found this product, move to next
-        }
-      }
-    }
-    
-    console.log(`📊 Target product matching found ${foundProducts.length}/6 products`);
-    
-    if (foundProducts.length >= 4) {
-      // If we found most target products, use them
-      return {
-        products: foundProducts,
-        rawText: text,
-        lineCount: lines.length
-      };
-    }
+    // Generic extraction only; no hard-coded target products
     
     // More comprehensive Lithuanian product patterns
     const productIndicators = [
