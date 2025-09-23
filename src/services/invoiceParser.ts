@@ -139,69 +139,19 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
       if (parsedData.products.length > 0) {
         console.log('✅ Using direct PDF text extraction (more accurate than vision OCR)');
         
-        // Just use the correct data - I can see it clearly in the console
-        const correctProducts = [
-          {
-            productName: 'Mocarelos sūrio lazdelės džiūvėsėliuose, 1kg, šaldytos',
-            description: 'Mocarelos sūrio lazdelės džiūvėsėliuose, 1kg, šaldytos',
-            quantity: 5,
-            unit: 'kg',
-            unitPrice: 10.37,
-            totalPrice: 44.07,
-            vatRate: 21,
-            needsReview: false
-          },
-          {
-            productName: 'Kiaulienos šoninė karštai rūkyta, pjaustyta, 1,5kg+, vakuume, atšaldyta',
-            description: 'Kiaulienos šoninė karštai rūkyta, pjaustyta, 1,5kg+, vakuume, atšaldyta',
-            quantity: 3.108,
-            unit: 'kg',
-            unitPrice: 6.90,
-            totalPrice: 21.45,
-            vatRate: 21,
-            needsReview: false
-          },
-          {
-            productName: 'Viščiukų.broilerių filė, 4x2.5kg, šaldyta',
-            description: 'Viščiukų.broilerių filė, 4x2.5kg, šaldyta',
-            quantity: 5,
-            unit: 'kg',
-            unitPrice: 6.30,
-            totalPrice: 29.93,
-            vatRate: 21,
-            needsReview: false
-          },
-          {
-            productName: 'Bulvės „Dippers" 4x2,5 kg, Lamb Weston, šaldytos',
-            description: 'Bulvės „Dippers" 4x2,5 kg, Lamb Weston, šaldytos',
-            quantity: 4,
-            unit: 'vnt',
-            unitPrice: 6.40,
-            totalPrice: 21.76,
-            vatRate: 21,
-            needsReview: false
-          },
-          {
-            productName: 'Sūrio-čili pipirų užkanda, 1 kg, šaldyta',
-            description: 'Sūrio-čili pipirų užkanda, 1 kg, šaldyta',
-            quantity: 5,
-            unit: 'kg',
-            unitPrice: 8.84,
-            totalPrice: 37.57,
-            vatRate: 21,
-            needsReview: false
-          },
-          {
-            productName: 'Krevetės džiūvėsėliuose „Torpedo" (torpedos formos), 10x1 kg, šaldytos (Litopenaeus Vannamei)',
-            description: 'Krevetės džiūvėsėliuose „Torpedo" (torpedos formos), 10x1 kg, šaldytos (Litopenaeus Vannamei)',
-            quantity: 2,
-            unit: 'kg',
-            unitPrice: 11.50,
-            totalPrice: 19.55,
-            vatRate: 21,
-            needsReview: false
-          }
-        ];
+        // Use the actual parsed data from PDF text extraction
+        const correctProducts = parsedData.products.map((product: any) => ({
+          productName: product.productName,
+          description: product.description || product.productName,
+          quantity: product.quantity || 1,
+          unit: normalizeUnit(product.unit) || 'kg',
+          unitPrice: product.unitPrice || 0,
+          totalPrice: product.totalPrice || 0,
+          vatRate: 21,
+          needsReview: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }));
 
         const invoiceNumber = (parsedData as any).invoice?.invoiceNumber || 'FL000000';
         const invoiceDate = (parsedData as any).invoice?.invoiceDate || '2025-09-01';
