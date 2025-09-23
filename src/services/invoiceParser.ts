@@ -203,8 +203,8 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
           }
         ];
 
-        const invoiceNumber = parsedData.invoice?.invoiceNumber || 'FL000000';
-        const invoiceDate = parsedData.invoice?.invoiceDate || '2025-09-01';
+        const invoiceNumber = (parsedData as any).invoice?.invoiceNumber || 'FL000000';
+        const invoiceDate = (parsedData as any).invoice?.invoiceDate || '2025-09-01';
         
         return {
       invoice: {
