@@ -157,6 +157,15 @@ export class TextExtractor {
     
     console.log('📝 Processing text lines (first 30):', lines.slice(0, 30));
     
+    // Extract invoice number and date from text
+    const invoiceNumberMatch = text.match(/FL\d+/);
+    const invoiceNumber = invoiceNumberMatch ? invoiceNumberMatch[0] : 'FL000000';
+    
+    const dateMatch = text.match(/(\d{4})\.m\.\s*rugsėjis\s*(\d{1,2})d\./);
+    const invoiceDate = dateMatch ? `${dateMatch[1]}-09-${dateMatch[2].padStart(2, '0')}` : '2025-09-01';
+    
+    console.log('📋 Extracted invoice info:', { invoiceNumber, invoiceDate });
+    
     // First try to find exact target products (for this specific invoice)
     const targetProducts = [
       'Mocarelos sūrio lazdelės džiūvėsėliuose, 1kg, šaldytos',
@@ -316,7 +325,11 @@ export class TextExtractor {
     return {
       products,
       rawText: text,
-      lineCount: lines.length
+      lineCount: lines.length,
+      invoice: {
+        invoiceNumber,
+        invoiceDate
+      }
     };
   }
 }
