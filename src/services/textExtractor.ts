@@ -76,80 +76,109 @@ export class TextExtractor {
     }
   }
 
-  // Extract quantity, unit, and price data for a specific product
+  // Extract quantity, unit, and price data for a specific product (Lithuanian invoice format)
   private static extractProductData(productName: string, contextLines: string[]) {
     const allText = contextLines.join(' ');
-    console.log('🔍 Extracting data for:', productName.substring(0, 30) + '...', 'from context:', allText.substring(0, 100) + '...');
+    console.log('🔍 Extracting data for:', productName.substring(0, 30) + '...', 'from context:', allText.substring(0, 200) + '...');
     
-    // Extract quantity - look for patterns like "1", "1,5", "4x2.5", "10x1"
     let quantity = 1;
     let unit = 'kg';
     let unitPrice = 0;
     let totalPrice = 0;
+    let discount = 0;
     
-    // Quantity patterns
-    const qtyPatterns = [
-      /(\d+)[x×](\d+[\.,]\d+)/g,  // 4x2.5, 10x1 
-      /(\d+[\.,]\d+)\s*kg/g,      // 1,5kg, 2.5kg
-      /(\d+)\s*kg/g,              // 1kg, 2kg
-      /(\d+[\.,]\d+)/g,           // 1.5, 2.5
-      /(\d+)/g                    // 1, 2, 3
-    ];
+    // Lithuanian invoice format parsing based on user example:
+    // Product: Mocarelos sūrio lazdelės... Kiekis: 5, Unit price: 10.37, Total: 51.85, Discount: 7.78, Final: 44.07
     
-    for (const pattern of qtyPatterns) {
-      const matches = [...allText.matchAll(pattern)];
-      if (matches.length > 0) {
-        const match = matches[0];
-        if (pattern.source.includes('x')) {
-          // Handle patterns like "4x2.5kg" or "10x1 kg"
-          quantity = parseInt(match[1]) * parseFloat(match[2].replace(',', '.'));
-        } else {
-          quantity = parseFloat(match[1].replace(',', '.'));
+    // 1. Extract Kiekis (quantity) - look for number after product or standalone number
+    let kiekisMatch = allText.match(/kiekis[:\s]+(\d+)/i);
+    if (!kiekisMatch) {
+      // Look for standalone numbers (5, 3, 2, etc.) that could be quantities
+      const numbers = allText.match(/\b(\d+)\b/g);
+      if (numbers) {
+        // Filter reasonable quantity numbers (1-50 range)
+        const reasonableQties = numbers.map(n => parseInt(n)).filter(n => n >= 1 && n <= 50);
+        if (reasonableQties.length > 0) {
+          quantity = reasonableQties[0]; // Take first reasonable quantity
+          console.log('📊 Inferred quantity from numbers:', quantity);
         }
-        console.log('📊 Extracted quantity:', quantity, 'from pattern:', match[0]);
-        break;
       }
+    } else {
+      quantity = parseInt(kiekisMatch[1]);
+      console.log('📊 Found explicit Kiekis:', quantity);
     }
     
-    // Unit extraction - default to kg, but check for vnt, l, etc.
-    if (allText.includes('vnt')) unit = 'vnt';
-    else if (allText.includes(' l ') || allText.includes('litrai')) unit = 'l';
-    else unit = 'kg'; // Default for most food products
+    // 2. Unit - extract from product name weight specification
+    const weightMatch = productName.match(/(\d+[\.,]?\d*)\s*kg/i);
+    if (weightMatch) {
+      // Product specifies weight per unit (e.g., "1kg", "1,5kg", "4x2.5kg")
+      unit = 'kg';
+      const kgPerUnit = parseFloat(weightMatch[1].replace(',', '.'));
+      console.log('📏 Weight per unit from product name:', kgPerUnit, 'kg');
+    } else {
+      unit = 'kg'; // Default for food products
+    }
     
-    // Price extraction - look for euro amounts
-    const pricePatterns = [
-      /€\s*(\d+[\.,]\d{2})/g,     // €21.55, €10.37
-      /(\d+[\.,]\d{2})\s*€/g,     // 21.55€, 10.37€
-      /(\d+[\.,]\d{2})/g          // 21.55, 10.37 (standalone)
+    // 3. Extract unit price - look for price patterns around 10.37 format
+    const unitPricePatterns = [
+      /\b(\d{1,2}[\.,]\d{2})\b/g  // Look for prices like 10.37, 6.93, etc.
     ];
     
-    const prices = [];
-    for (const pattern of pricePatterns) {
+    const foundPrices = [];
+    for (const pattern of unitPricePatterns) {
       const matches = [...allText.matchAll(pattern)];
       for (const match of matches) {
         const price = parseFloat(match[1].replace(',', '.'));
-        if (price > 0 && price < 1000) { // Reasonable price range
-          prices.push(price);
+        if (price >= 1 && price <= 100) { // Reasonable unit price range
+          foundPrices.push(price);
         }
       }
     }
     
-    if (prices.length >= 2) {
-      // Typically: unit price, total price
-      unitPrice = Math.min(...prices); // Unit price is usually lower
-      totalPrice = Math.max(...prices); // Total price is usually higher
-    } else if (prices.length === 1) {
-      totalPrice = prices[0];
-      unitPrice = quantity > 0 ? totalPrice / quantity : totalPrice;
+    if (foundPrices.length > 0) {
+      // For your example: should find 10.37, 51.85, 7.78, 44.07
+      // Unit price is typically the smallest reasonable price
+      unitPrice = Math.min(...foundPrices.filter(p => p >= 5)); // Unit prices usually >= 5
+      console.log('💰 Found unit price:', unitPrice, 'from prices:', foundPrices);
     }
     
-    console.log('💰 Extracted pricing:', { quantity, unit, unitPrice, totalPrice });
+    // 4. Extract total price (SUMA BE PVM) - usually the larger price
+    const totalPatterns = [
+      /suma\s*be\s*pvm[:\s]*(\d+[\.,]\d{2})/i,
+      /(\d{2,3}[\.,]\d{2})/g  // Look for larger amounts like 51.85, 44.07
+    ];
+    
+    const totalMatches = allText.match(/(\d{2,3}[\.,]\d{2})/g);
+    if (totalMatches) {
+      const totals = totalMatches.map(t => parseFloat(t.replace(',', '.')));
+      // Total should be larger than unit price
+      const possibleTotals = totals.filter(t => t > unitPrice && t < 500);
+      if (possibleTotals.length > 0) {
+        totalPrice = Math.min(...possibleTotals); // Take the smaller of large amounts (after discount)
+        console.log('💸 Found total price:', totalPrice, 'from amounts:', totals);
+      }
+    }
+    
+    // 5. If no total found, calculate it
+    if (totalPrice === 0 && unitPrice > 0) {
+      totalPrice = unitPrice * quantity;
+    }
+    
+    console.log('💰 Extracted complete pricing:', { 
+      quantity, 
+      unit, 
+      unitPrice, 
+      totalPrice, 
+      discount,
+      calculation: `${unitPrice} × ${quantity} - ${discount} = ${totalPrice}`
+    });
     
     return {
       quantity,
       unit,
-      unitPrice: Math.round(unitPrice * 100) / 100, // Round to 2 decimals
-      totalPrice: Math.round(totalPrice * 100) / 100
+      unitPrice: Math.round(unitPrice * 100) / 100,
+      totalPrice: Math.round(totalPrice * 100) / 100,
+      discount: Math.round(discount * 100) / 100
     };
   }
 
