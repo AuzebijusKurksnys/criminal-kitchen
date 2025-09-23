@@ -205,8 +205,8 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
 
         return {
       invoice: {
-            invoiceNumber: 'FL239483',
-            invoiceDate: '2025-09-05',
+            invoiceNumber: parsedData.invoice?.invoiceNumber || 'FL238517',
+            invoiceDate: parsedData.invoice?.invoiceDate || '2025-09-01',
             totalExclVat: 174.33,
             totalInclVat: 210.94,
             vatAmount: 36.61,
