@@ -43,6 +43,8 @@ export function InvoiceReviewPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [productMatches, setProductMatches] = useState<{ [lineItemIndex: number]: ProductMatch[] }>({});
   const [selectedMatches, setSelectedMatches] = useState<{ [lineItemIndex: number]: string }>({});
+  const [editingItems, setEditingItems] = useState<{ [lineItemIndex: number]: boolean }>({});
+  const [editedData, setEditedData] = useState<InvoiceProcessingResult | null>(null);
 
   useEffect(() => {
     if (!state?.extractedData || !state?.file) {
@@ -51,6 +53,7 @@ export function InvoiceReviewPage() {
     }
 
     setExtractedData(state.extractedData);
+    setEditedData(state.extractedData); // Initialize edited data
     setFile(state.file);
     loadData();
   }, [state, navigate]);
@@ -85,6 +88,29 @@ export function InvoiceReviewPage() {
       console.error('Error loading data:', error);
       showToast('error', 'Failed to load suppliers and products');
     }
+  };
+
+  // Manual correction functions
+  const toggleEditing = (index: number) => {
+    setEditingItems(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
+  };
+
+  const updateLineItem = (index: number, field: string, value: any) => {
+    if (!editedData) return;
+    
+    const updatedLineItems = [...editedData.lineItems];
+    updatedLineItems[index] = {
+      ...updatedLineItems[index],
+      [field]: value
+    };
+    
+    setEditedData({
+      ...editedData,
+      lineItems: updatedLineItems
+    });
   };
 
   const handleInvoiceDataChange = (field: string, value: any) => {
@@ -404,6 +430,22 @@ export function InvoiceReviewPage() {
         <p className="mt-2 text-gray-600">
           Review and confirm the extracted data before processing the invoice.
         </p>
+        
+        {/* OCR Warning */}
+        <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0">
+              <span className="text-amber-500">⚠️</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-amber-800">OCR Extraction Notice</h3>
+              <p className="mt-1 text-sm text-amber-700">
+                The data below was automatically extracted using AI. <strong>Please verify all product names, quantities, and prices</strong> are correct. 
+                Click the "✏️ Fix" button next to any item to manually correct OCR errors.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
@@ -545,14 +587,35 @@ export function InvoiceReviewPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
-                      <input
-                        type="text"
-                        value={lineItem.productName}
-                        onChange={(e) => handleLineItemChange(index, 'productName', e.target.value)}
-                        className="w-full border-gray-300 rounded-md text-sm"
-                      />
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          value={lineItem.productName}
+                          onChange={(e) => handleLineItemChange(index, 'productName', e.target.value)}
+                          className="flex-1 border-gray-300 rounded-md text-sm"
+                          placeholder="Product name (edit if OCR is wrong)"
+                        />
+                        <button
+                          onClick={() => toggleEditing(index)}
+                          className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200"
+                          title="Manual OCR correction"
+                        >
+                          ✏️ Fix
+                        </button>
+                      </div>
                       {lineItem.description && (
                         <p className="text-xs text-gray-500 mt-1">{lineItem.description}</p>
+                      )}
+                      {editingItems[index] && (
+                        <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                          <p className="text-xs text-yellow-700 mb-2">💡 <strong>Manual Correction Mode:</strong> Edit the product name above if OCR extracted it incorrectly.</p>
+                          <button
+                            onClick={() => toggleEditing(index)}
+                            className="text-xs text-yellow-600 hover:text-yellow-800"
+                          >
+                            Done editing
+                          </button>
+                        </div>
                       )}
                     </div>
                   </td>
