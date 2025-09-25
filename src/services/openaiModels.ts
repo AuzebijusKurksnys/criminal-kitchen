@@ -15,7 +15,7 @@ export const OPENAI_MODELS = {
   'gpt-4-turbo': {
     name: 'GPT-4 Turbo Vision', 
     description: 'Faster processing - good for standard invoices',
-    maxTokens: 12000,
+    maxTokens: 3500,
     temperature: 0.0,
     strengths: ['speed', 'standard layouts', 'consistent formatting'],
     costPer1kTokens: 0.003

@@ -134,50 +134,90 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
         productCount: parsedData.products.length,
         products: parsedData.products.map(p => p.productName)
       });
-      
-      // Skip broken text extraction - use OpenAI Vision OCR instead
-      if (false && parsedData.products.length > 0) {
-        console.log('⚠️ Skipping broken text extraction - using OpenAI Vision OCR');
-        
-        // Use the actual parsed data from PDF text extraction
-        const correctProducts = parsedData.products.map((product: any) => ({
-          productName: product.productName,
-          description: product.description || product.productName,
-          quantity: product.quantity || 1,
-          unit: normalizeUnit(product.unit) || 'kg',
-          unitPrice: product.unitPrice || 0,
-          totalPrice: product.totalPrice || 0,
-          vatRate: 21,
-          needsReview: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }));
 
-        const invoiceNumber = (parsedData as any).invoice?.invoiceNumber || 'FL000000';
-        const invoiceDate = (parsedData as any).invoice?.invoiceDate || '2025-09-01';
-        
-        // Calculate totals from the actual PDF (FL238517 totals)
-        const totalExclVat = invoiceNumber === 'FL238517' ? 143.31 : 174.33;
-        const totalInclVat = invoiceNumber === 'FL238517' ? 173.41 : 210.94;
-        const vatAmount = totalInclVat - totalExclVat;
-        
+      if (parsedData.products.length > 0) {
+        console.log('✅ Using direct PDF text extraction (structured table parsing)');
+
+        processingInfo.service = 'PDF Text Extraction';
+        processingInfo.parser = 'pdf-text-layer';
+        processingInfo.pdfTextExtraction = true;
+
+        const nowIso = new Date().toISOString();
+        const invoiceNumber = parsedData.invoice?.invoiceNumber || 'PDF-INVOICE';
+        const invoiceDate = parsedData.invoice?.invoiceDate || new Date().toISOString().split('T')[0];
+
+        const lineItems = parsedData.products.map((product, index) => {
+          const sanitizedName = sanitizeProductName(product.productName || product.description || `Product ${index + 1}`);
+          const description = sanitizeProductName(product.description || product.productName || sanitizedName);
+          const quantity = parseNumber(product.quantity ?? 1) || 1;
+          const unitPrice = parseNumber(product.unitPrice ?? 0);
+          const computedTotal = Math.round(quantity * unitPrice * 100) / 100;
+          const totalPrice = parseNumber(product.totalPrice ?? computedTotal) || computedTotal;
+
+          return {
+            productName: sanitizedName,
+            description,
+            quantity,
+            unit: normalizeUnit(product.unit || 'pcs'),
+            unitPrice,
+            totalPrice,
+            vatRate: typeof product.vatRate === 'number' ? product.vatRate : 21,
+            needsReview: false,
+            notes: product.expiryDate ? `Use by ${product.expiryDate}` : undefined,
+            createdAt: nowIso,
+            updatedAt: nowIso
+          };
+        });
+
+        const computedLineTotal = lineItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
+        const productsDiscountTotal = parsedData.products.reduce((sum, product) => sum + (product.discountAmount || 0), 0);
+
+        const totalExclVat = parseNumber(parsedData.invoice?.totalExclVat ?? computedLineTotal);
+        const vatAmount = parsedData.invoice?.vatAmount !== undefined
+          ? parseNumber(parsedData.invoice.vatAmount)
+          : (parsedData.invoice?.totalInclVat !== undefined
+            ? parseNumber(parsedData.invoice.totalInclVat) - totalExclVat
+            : 0);
+        const totalInclVat = parsedData.invoice?.totalInclVat !== undefined
+          ? parseNumber(parsedData.invoice.totalInclVat)
+          : totalExclVat + vatAmount;
+        const discountAmount = parseNumber(parsedData.invoice?.discountAmount ?? productsDiscountTotal);
+
+        const toCurrency = (value: number) => Math.round(value * 100) / 100;
+
+        const matches = await findProductMatches(lineItems);
+
         return {
-      invoice: {
+          invoice: {
             invoiceNumber,
             invoiceDate,
-            totalExclVat,
-            totalInclVat,
-            vatAmount,
-            discountAmount: 0,
+            totalExclVat: toCurrency(totalExclVat),
+            totalInclVat: toCurrency(totalInclVat),
+            vatAmount: toCurrency(vatAmount),
+            discountAmount: toCurrency(discountAmount),
             currency: 'EUR' as const,
-            status: 'pending' as const
+            status: 'review' as const,
+            fileName: file.name,
+            fileSize: file.size,
+            mimeType: file.type,
+            extractedData: {
+              parser: 'pdf-text-extraction',
+              rawText: parsedData.rawText,
+              products: parsedData.products,
+              invoice: parsedData.invoice
+            },
+            createdAt: nowIso,
+            updatedAt: nowIso
           },
-          lineItems: correctProducts,
-      matches: {},
-      errors: [],
-          warnings: [`Using direct text extraction from ${invoiceNumber}`],
-          supplierInfo: {
-            name: 'UAB "Foodlevel"'
+          lineItems,
+          matches,
+          errors: [],
+          warnings: ['Processed using PDF text extraction'],
+          supplierInfo: parsedData.supplier ? {
+            name: parsedData.supplier.name
+          } : undefined,
+          processingInfo: {
+            ...processingInfo
           }
         };
       }
