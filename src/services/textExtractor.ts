@@ -313,13 +313,12 @@ export class TextExtractor {
       return undefined;
     }
 
-    const indexMatch = sanitized.match(/^(\d+)\s+(.*)$/);
-    if (!indexMatch) {
-      console.warn('⚠️ Unable to parse product row (missing index):', row);
-      return undefined;
+    let remainder = sanitized;
+    const indexMatch = remainder.match(/^(\d+)\s+(.*)$/);
+    if (indexMatch) {
+      remainder = indexMatch[2].trim();
     }
 
-    let remainder = indexMatch[2].trim();
     let expiryDate: string | undefined;
     const expiryMatch = remainder.match(/(\d{4}-\d{2}-\d{2})\s*$/);
     if (expiryMatch) {
@@ -327,53 +326,25 @@ export class TextExtractor {
       remainder = remainder.slice(0, expiryMatch.index).trim();
     }
 
-    remainder = remainder.replace(/\b\d+[.,]?\d*\s+(kg|vnt|pcs|l|ml)\s*$/iu, '').trim();
+    // Expecting pattern: name ... quantity unit unitPrice subtotal [discount] total
+    const tailPattern = /^(.+?)\s+(\d+[.,]?\d*)\s+(kg|vnt|pcs|l|ml)\s+(\d+[.,]?\d*)\s+(\d+[.,]?\d*)(?:\s+(\d+[.,]?\d*))?\s+(\d+[.,]?\d*)$/iu;
+    const match = remainder.match(tailPattern);
 
-    const tokens = remainder.split(/\s+/);
-    if (tokens.length < 5) {
-      console.warn('⚠️ Product row has insufficient tokens:', row);
+    if (!match) {
+      console.warn('⚠️ Unable to parse product row tail:', row);
       return undefined;
     }
 
-    const numericTokens: string[] = [];
-    while (tokens.length && NUMERIC_REGEX.test(tokens[tokens.length - 1])) {
-      numericTokens.unshift(tokens.pop() as string);
-    }
-
-    if (numericTokens.length < 4) {
-      console.warn('⚠️ Product row missing numeric columns:', row, numericTokens);
-      return undefined;
-    }
-
-    let unitToken = tokens.pop() ?? 'vnt';
-    if (!UNIT_REGEX.test(unitToken)) {
-      tokens.push(unitToken);
-      unitToken = 'vnt';
-    }
-
-    const quantityStr = numericTokens.shift()!;
-    const unitPriceStr = numericTokens.shift()!;
-    const subtotalStr = numericTokens.shift()!;
-
-    let discountStr: string | undefined;
-    let totalStr: string | undefined;
-
-    if (numericTokens.length === 2) {
-      discountStr = numericTokens.shift();
-      totalStr = numericTokens.shift();
-    } else if (numericTokens.length === 1) {
-      totalStr = numericTokens.shift();
-    } else if (numericTokens.length > 2) {
-      while (numericTokens.length > 2) {
-        tokens.push(numericTokens.shift() as string);
-      }
-      discountStr = numericTokens.shift();
-      totalStr = numericTokens.shift();
-    }
-
-    if (!totalStr) {
-      totalStr = subtotalStr;
-    }
+    const [
+      ,
+      leadingText,
+      quantityStr,
+      unitStr,
+      unitPriceStr,
+      subtotalStr,
+      discountStr,
+      totalStr
+    ] = match;
 
     const quantity = this.parseNumber(quantityStr);
     const unitPrice = this.parseNumber(unitPriceStr);
@@ -381,30 +352,33 @@ export class TextExtractor {
     const total = this.parseNumber(totalStr);
     const computedDiscount = this.round(subtotal - total);
 
-    let discount = discountStr !== undefined ? this.parseNumber(discountStr) : computedDiscount;
+    let discount = discountStr ? this.parseNumber(discountStr) : computedDiscount;
     if (Math.abs(discount - computedDiscount) > 0.05) {
-      if (Math.abs(computedDiscount) <= 0.05) {
-        discount = 0;
-      } else {
-        discount = computedDiscount;
-      }
+      discount = Math.abs(computedDiscount) <= 0.05 ? 0 : computedDiscount;
     }
     if (discount < 0.01) {
       discount = 0;
     }
 
-    this.removeTrailingCountry(tokens);
-    const productName = this.cleanProductName(tokens.join(' '));
+    const leadingTokens = leadingText.split(/\s+/).filter(Boolean);
+    this.removeTrailingCountry(leadingTokens);
+    const rawName = this.cleanProductName(leadingTokens.join(' '));
 
-    if (!productName) {
+    if (!rawName) {
       console.warn('⚠️ Empty product name detected for row:', row);
     }
+
+    const productName = this.cleanProductName(rawName)
+      .replace(/\b(Latvija|Latvia)\b.*$/i, '')
+      .replace(/\b(Lietuva|Lithuania|Ukraine|Netherlands|Olandija|Holland)\b.*$/i, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
 
     const parsedProduct: ParsedProduct = {
       productName,
       description: productName,
       quantity: this.round(quantity),
-      unit: unitToken.toLowerCase(),
+      unit: unitStr.toLowerCase(),
       unitPrice: this.round(unitPrice),
       totalBeforeDiscount: this.round(subtotal),
       discountAmount: this.round(discount),
@@ -421,14 +395,37 @@ export class TextExtractor {
     const rows = this.extractTableRows(text);
     const products: ParsedProduct[] = [];
 
+    const expandedRows: string[] = [];
+    const rowSplitRegex = /(?<=\d{4}-\d{2}-\d{2})\s+(?=\d+\s)/g;
+
     for (const row of rows) {
+      const normalized = row.replace(/\s+/g, ' ').trim();
+      if (!normalized) {
+        continue;
+      }
+
+      const segments = normalized.split(rowSplitRegex);
+      for (const segment of segments) {
+        const cleaned = segment.trim();
+        if (cleaned) {
+          expandedRows.push(cleaned);
+        }
+      }
+    }
+
+    for (const row of expandedRows) {
       const parsed = this.parseProductRow(row);
       if (parsed) {
         products.push(parsed);
       }
     }
 
-    console.log(`📊 Structured table parsing found ${products.length} products`);
+    console.log('📊 Structured table parsing found products:', {
+      rowCount: rows.length,
+      expandedRowCount: expandedRows.length,
+      productCount: products.length
+    });
+
     return products;
   }
 

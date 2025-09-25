@@ -1,0 +1,448 @@
+[33mcommit d69e07b100efc7c9a141ab60e638d0e039fcbfa0[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: User <user@local>
+Date:   Thu Sep 25 13:28:49 2025 +0300
+
+    Improve PDF text parser and adjust OpenAI config
+
+[1mdiff --git a/src/services/invoiceParser.ts b/src/services/invoiceParser.ts[m
+[1mindex 14db96f..5a4c7fa 100644[m
+[1m--- a/src/services/invoiceParser.ts[m
+[1m+++ b/src/services/invoiceParser.ts[m
+[36m@@ -134,50 +134,90 @@[m [mexport async function extractInvoiceData(file: File): Promise<InvoiceProcessingR[m
+         productCount: parsedData.products.length,[m
+         products: parsedData.products.map(p => p.productName)[m
+       });[m
+[31m-      [m
+[31m-      // Skip broken text extraction - use OpenAI Vision OCR instead[m
+[31m-      if (false && parsedData.products.length > 0) {[m
+[31m-        console.log('⚠️ Skipping broken text extraction - using OpenAI Vision OCR');[m
+[31m-        [m
+[31m-        // Use the actual parsed data from PDF text extraction[m
+[31m-        const correctProducts = parsedData.products.map((product: any) => ({[m
+[31m-          productName: product.productName,[m
+[31m-          description: product.description || product.productName,[m
+[31m-          quantity: product.quantity || 1,[m
+[31m-          unit: normalizeUnit(product.unit) || 'kg',[m
+[31m-          unitPrice: product.unitPrice || 0,[m
+[31m-          totalPrice: product.totalPrice || 0,[m
+[31m-          vatRate: 21,[m
+[31m-          needsReview: true,[m
+[31m-          createdAt: new Date().toISOString(),[m
+[31m-          updatedAt: new Date().toISOString()[m
+[31m-        }));[m
+[31m-[m
+[31m-        const invoiceNumber = (parsedData as any).invoice?.invoiceNumber || 'FL000000';[m
+[31m-        const invoiceDate = (parsedData as any).invoice?.invoiceDate || '2025-09-01';[m
+[31m-        [m
+[31m-        // Calculate totals from the actual PDF (FL238517 totals)[m
+[31m-        const totalExclVat = invoiceNumber === 'FL238517' ? 143.31 : 174.33;[m
+[31m-        const totalInclVat = invoiceNumber === 'FL238517' ? 173.41 : 210.94;[m
+[31m-        const vatAmount = totalInclVat - totalExclVat;[m
+[31m-        [m
+[32m+[m
+[32m+[m[32m      if (parsedData.products.length > 0) {[m
+[32m+[m[32m        console.log('✅ Using direct PDF text extraction (structured table parsing)');[m
+[32m+[m
+[32m+[m[32m        processingInfo.service = 'PDF Text Extraction';[m
+[32m+[m[32m        processingInfo.parser = 'pdf-text-layer';[m
+[32m+[m[32m        processingInfo.pdfTextExtraction = true;[m
+[32m+[m
+[32m+[m[32m        const nowIso = new Date().toISOString();[m
+[32m+[m[32m        const invoiceNumber = parsedData.invoice?.invoiceNumber || 'PDF-INVOICE';[m
+[32m+[m[32m        const invoiceDate = parsedData.invoice?.invoiceDate || new Date().toISOString().split('T')[0];[m
+[32m+[m
+[32m+[m[32m        const lineItems = parsedData.products.map((product, index) => {[m
+[32m+[m[32m          const sanitizedName = sanitizeProductName(product.productName || product.description || `Product ${index + 1}`);[m
+[32m+[m[32m          const description = sanitizeProductName(product.description || product.productName || sanitizedName);[m
+[32m+[m[32m          const quantity = parseNumber(product.quantity ?? 1) || 1;[m
+[32m+[m[32m          const unitPrice = parseNumber(product.unitPrice ?? 0);[m
+[32m+[m[32m          const computedTotal = Math.round(quantity * unitPrice * 100) / 100;[m
+[32m+[m[32m          const totalPrice = parseNumber(product.totalPrice ?? computedTotal) || computedTotal;[m
+[32m+[m
+[32m+[m[32m          return {[m
+[32m+[m[32m            productName: sanitizedName,[m
+[32m+[m[32m            description,[m
+[32m+[m[32m            quantity,[m
+[32m+[m[32m            unit: normalizeUnit(product.unit || 'pcs'),[m
+[32m+[m[32m            unitPrice,[m
+[32m+[m[32m            totalPrice,[m
+[32m+[m[32m            vatRate: typeof product.vatRate === 'number' ? product.vatRate : 21,[m
+[32m+[m[32m            needsReview: false,[m
+[32m+[m[32m            notes: product.expiryDate ? `Use by ${product.expiryDate}` : undefined,[m
+[32m+[m[32m            createdAt: nowIso,[m
+[32m+[m[32m            updatedAt: nowIso[m
+[32m+[m[32m          };[m
+[32m+[m[32m        });[m
+[32m+[m
+[32m+[m[32m        const computedLineTotal = lineItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0);[m
+[32m+[m[32m        const productsDiscountTotal = parsedData.products.reduce((sum, product) => sum + (product.discountAmount || 0), 0);[m
+[32m+[m
+[32m+[m[32m        const totalExclVat = parseNumber(parsedData.invoice?.totalExclVat ?? computedLineTotal);[m
+[32m+[m[32m        const vatAmount = parsedData.invoice?.vatAmount !== undefined[m
+[32m+[m[32m          ? parseNumber(parsedData.invoice.vatAmount)[m
+[32m+[m[32m          : (parsedData.invoice?.totalInclVat !== undefined[m
+[32m+[m[32m            ? parseNumber(parsedData.invoice.totalInclVat) - totalExclVat[m
+[32m+[m[32m            : 0);[m
+[32m+[m[32m        const totalInclVat = parsedData.invoice?.totalInclVat !== undefined[m
+[32m+[m[32m          ? parseNumber(parsedData.invoice.totalInclVat)[m
+[32m+[m[32m          : totalExclVat + vatAmount;[m
+[32m+[m[32m        const discountAmount = parseNumber(parsedData.invoice?.discountAmount ?? productsDiscountTotal);[m
+[32m+[m
+[32m+[m[32m        const toCurrency = (value: number) => Math.round(value * 100) / 100;[m
+[32m+[m
+[32m+[m[32m        const matches = await findProductMatches(lineItems);[m
+[32m+[m
+         return {[m
+[31m-      invoice: {[m
+[32m+[m[32m          invoice: {[m
+             invoiceNumber,[m
+             invoiceDate,[m
+[31m-            totalExclVat,[m
+[31m-            totalInclVat,[m
+[31m-            vatAmount,[m
+[31m-            discountAmount: 0,[m
+[32m+[m[32m            totalExclVat: toCurrency(totalExclVat),[m
+[32m+[m[32m            totalInclVat: toCurrency(totalInclVat),[m
+[32m+[m[32m            vatAmount: toCurrency(vatAmount),[m
+[32m+[m[32m            discountAmount: toCurrency(discountAmount),[m
+             currency: 'EUR' as const,[m
+[31m-            status: 'pending' as const[m
+[32m+[m[32m            status: 'review' as const,[m
+[32m+[m[32m            fileName: file.name,[m
+[32m+[m[32m            fileSize: file.size,[m
+[32m+[m[32m            mimeType: file.type,[m
+[32m+[m[32m            extractedData: {[m
+[32m+[m[32m              parser: 'pdf-text-extraction',[m
+[32m+[m[32m              rawText: parsedData.rawText,[m
+[32m+[m[32m              products: parsedData.products,[m
+[32m+[m[32m              invoice: parsedData.invoice[m
+[32m+[m[32m            },[m
+[32m+[m[32m            createdAt: nowIso,[m
+[32m+[m[32m            updatedAt: nowIso[m
+           },[m
+[31m-          lineItems: correctProducts,[m
+[31m-      matches: {},[m
+[31m-      errors: [],[m
+[31m-          warnings: [`Using direct text extraction from ${invoiceNumber}`],[m
+[31m-          supplierInfo: {[m
+[31m-            name: 'UAB "Foodlevel"'[m
+[32m+[m[32m          lineItems,[m
+[32m+[m[32m          matches,[m
+[32m+[m[32m          errors: [],[m
+[32m+[m[32m          warnings: ['Processed using PDF text extraction'],[m
+[32m+[m[32m          supplierInfo: parsedData.supplier ? {[m
+[32m+[m[32m            name: parsedData.supplier.name[m
+[32m+[m[32m          } : undefined,[m
+[32m+[m[32m          processingInfo: {[m
+[32m+[m[32m            ...processingInfo[m
+           }[m
+         };[m
+       }[m
+[1mdiff --git a/src/services/openaiModels.ts b/src/services/openaiModels.ts[m
+[1mindex 1b5c519..0b344e5 100644[m
+[1m--- a/src/services/openaiModels.ts[m
+[1m+++ b/src/services/openaiModels.ts[m
+[36m@@ -15,7 +15,7 @@[m [mexport const OPENAI_MODELS = {[m
+   'gpt-4-turbo': {[m
+     name: 'GPT-4 Turbo Vision', [m
+     description: 'Faster processing - good for standard invoices',[m
+[31m-    maxTokens: 12000,[m
+[32m+[m[32m    maxTokens: 3500,[m
+     temperature: 0.0,[m
+     strengths: ['speed', 'standard layouts', 'consistent formatting'],[m
+     costPer1kTokens: 0.003[m
+[1mdiff --git a/src/services/textExtractor.ts b/src/services/textExtractor.ts[m
+[1mindex 9b1e12d..e851414 100644[m
+[1m--- a/src/services/textExtractor.ts[m
+[1m+++ b/src/services/textExtractor.ts[m
+[36m@@ -1,12 +1,85 @@[m
+ // Direct text extraction from PDF using PDF.js text layer[m
+ import * as pdfjsLib from 'pdfjs-dist';[m
+ [m
+[32m+[m[32minterface ParsedProduct {[m
+[32m+[m[32m  productName: string;[m
+[32m+[m[32m  description: string;[m
+[32m+[m[32m  quantity: number;[m
+[32m+[m[32m  unit: string;[m
+[32m+[m[32m  unitPrice: number;[m
+[32m+[m[32m  totalBeforeDiscount?: number;[m
+[32m+[m[32m  discountAmount?: number;[m
+[32m+[m[32m  totalPrice: number;[m
+[32m+[m[32m  vatRate?: number;[m
+[32m+[m[32m  expiryDate?: string;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32minterface ParsedInvoiceSummary {[m
+[32m+[m[32m  invoiceNumber?: string;[m
+[32m+[m[32m  invoiceDate?: string;[m
+[32m+[m[32m  totalExclVat?: number;[m
+[32m+[m[32m  totalInclVat?: number;[m
+[32m+[m[32m  vatAmount?: number;[m
+[32m+[m[32m  discountAmount?: number;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32minterface ParsedSupplierInfo {[m
+[32m+[m[32m  name: string;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32minterface ParsedInvoiceResult {[m
+[32m+[m[32m  products: ParsedProduct[];[m
+[32m+[m[32m  rawText: string;[m
+[32m+[m[32m  lineCount: number;[m
+[32m+[m[32m  invoice?: ParsedInvoiceSummary;[m
+[32m+[m[32m  supplier?: ParsedSupplierInfo;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mconst NUMERIC_REGEX = /^-?\d+(?:[.,]\d+)?$/;[m
+[32m+[m[32mconst UNIT_REGEX = /^[\p{L}%]+$/u;[m
+[32m+[m
+[32m+[m[32mconst COUNTRY_KEYWORDS = new Set([[m
+[32m+[m[32m  'latvia',[m
+[32m+[m[32m  'latvija',[m
+[32m+[m[32m  'latvijos',[m
+[32m+[m[32m  'lithuania',[m
+[32m+[m[32m  'lietuva',[m
+[32m+[m[32m  'lietuvoje',[m
+[32m+[m[32m  'ukraine',[m
+[32m+[m[32m  'ukraina',[m
+[32m+[m[32m  'poland',[m
+[32m+[m[32m  'lenkija',[m
+[32m+[m[32m  'netherlands',[m
+[32m+[m[32m  'olandija',[m
+[32m+[m[32m  'holland',[m
+[32m+[m[32m  'estonia',[m
+[32m+[m[32m  'estija',[m
+[32m+[m[32m  'germany',[m
+[32m+[m[32m  'vokietija',[m
+[32m+[m[32m  'italy',[m
+[32m+[m[32m  'italija',[m
+[32m+[m[32m  'spain',[m
+[32m+[m[32m  'ispanija',[m
+[32m+[m[32m  'france',[m
+[32m+[m[32m  'prancuzija',[m
+[32m+[m[32m  'belgium',[m
+[32m+[m[32m  'belgija',[m
+[32m+[m[32m  'denmark',[m
+[32m+[m[32m  'danija',[m
+[32m+[m[32m  'norway',[m
+[32m+[m[32m  'norvegija',[m
+[32m+[m[32m  'sweden',[m
+[32m+[m[32m  'svedija',[m
+[32m+[m[32m  'finland',[m
+[32m+[m[32m  'suomija'[m
+[32m+[m[32m]);[m
+[32m+[m
+ export class TextExtractor {[m
+   private static async initializePDFJS() {[m
+     if (typeof window !== 'undefined') {[m
+[31m-      const pdfjsLib = await import('pdfjs-dist');[m
+[31m-      pdfjsLib.GlobalWorkerOptions.workerSrc = '/js/pdf.worker.min.js';[m
+[31m-      return pdfjsLib;[m
+[32m+[m[32m      const pdfjs = await import('pdfjs-dist');[m
+[32m+[m[32m      pdfjs.GlobalWorkerOptions.workerSrc = '/js/pdf.worker.min.js';[m
+[32m+[m[32m      return pdfjs;[m
+     }[m
+     throw new Error('PDF text extraction only available in browser');[m
+   }[m
+[36m@@ -17,351 +90,495 @@[m [mexport class TextExtractor {[m
+       const pdfjs = await this.initializePDFJS();[m
+       const arrayBuffer = await file.arrayBuffer();[m
+       const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;[m
+[31m-      [m
+[32m+[m
+       let fullText = '';[m
+[31m-      [m
+[31m-      // Extract text from all pages[m
+[32m+[m
+       for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {[m
+         const page = await pdf.getPage(pageNum);[m
+         const textContent = await page.getTextContent();[m
+[31m-        [m
+[31m-        // Combine text items preserving spatial layout[m
+         const textItems = textContent.items as any[];[m
+[31m-        [m
+[31m-        // Sort by Y position (top to bottom) then X position (left to right)[m
+[32m+[m
+         textItems.sort((a, b) => {[m
+           const yDiff = Math.abs(a.transform[5] - b.transform[5]);[m
+[31m-          if (yDiff > 5) { // Different lines[m
+[31m-            return b.transform[5] - a.transform[5]; // Top to bottom[m
+[32m+[m[32m          if (yDiff > 5) {[m
+[32m+[m[32m            return b.transform[5] - a.transform[5];[m
+           }[m
+[31m-          return a.transform[4] - b.transform[4]; // Left to right[m
+[32m+[m[32m          return a.transform[4] - b.transform[4];[m
+         });[m
+[31m-        [m
+[31m-        // Group items by line (similar Y coordinates)[m
+[32m+[m
+         const lines: string[] = [];[m
+         let currentLine = '';[m
+         let lastY = -1;[m
+[31m-        [m
+[32m+[m
+         for (const item of textItems) {[m
+           const y = item.transform[5];[m
+[31m-          [m
+           if (lastY === -1 || Math.abs(y - lastY) > 5) {[m
+[31m-            // New line[m
+             if (currentLine.trim()) {[m
+               lines.push(currentLine.trim());[m
+             }[m
+             currentLine = item.str;[m
+             lastY = y;[m
+           } else {[m
+[31m-            // Same line[m
+             currentLine += (item.str.startsWith(' ') ? '' : ' ') + item.str;[m
+           }[m
+         }[m
+[31m-        [m
+[31m-        // Add final line[m
+[32m+[m
+         if (currentLine.trim()) {[m
+           lines.push(currentLine.trim());[m
+         }[m
+[31m-        [m
+[32m+[m
+         const pageText = lines.join('\n');[m
+         fullText += pageText + '\n\n';[m
+       }[m
+[31m-      [m
+[32m+[m
+       console.log('📄 Extracted raw PDF text:', fullText.substring(0, 500) + '...');[m
+       return fullText;[m
+[31m-      [m
+     } catch (error) {[m
+       console.error('PDF text extraction failed:', error);[m
+       throw new Error(`Failed to extract text from PDF: ${error}`);[m
+     }[m
+   }[m
+ [m
+[31m-  // Extract quantity, unit, and price data for a specific product (Lithuanian invoice format)[m
+[31m-  private static extractProductData(productName: string, contextLines: string[], allLines: string[], productIndex: number) {[m
+[31m-    const allText = contextLines.join(' ');[m
+[31m-    console.log('🔍 Extracting data for:', productName.substring(0, 30) + '...');[m
+[31m-    [m
+[31m-    // Parse the table structure - look for the specific row for this product[m
+[31m-    // Format: Nr | Product | Country | Quantity | Unit | UnitPrice | Total | Discount | FinalTotal | Date[m
+[31m-    [m
+[31m-    let quantity = 1;[m
+[31m-    let unit = 'kg';[m
+[31m-    let unitPrice = 0;[m
+[31m-    let totalPrice = 0;[m
+[31m-    [m
+[31m-    // Simple approach: just use the correct values based on your data[m
+[31m-    // From console log, I can see the exact values for each product[m
+[31m-    [m
+[31m-    if (productName.includes('Mocarelos')) {[m
+[31m-      quantity = 5;[m
+[31m-      unitPrice = 10.37;[m
+[31m-      totalPrice = 44.07;[m
+[31m-      console.log('📊 Using correct Mocarelos data: 5kg × 10.37 = 44.07');[m
+[31m-    } else if (productName.includes('Kiaulienos')) {[m
+[31m-      quantity = 3.108;[m
+[31m-      unitPrice = 6.90;[m
+[31m-      totalPrice = 21.45;[m
+[31m-      console.log('📊 Using correct Kiaulienos data: 3.108kg × 6.90 = 21.45');[m
+[31m-    } else if (productName.includes('Viščiukų')) {[m
+[31m-      quantity = 5;[m
+[31m-      unitPrice = 6.30;[m
+[31m-      totalPrice = 29.93;[m
+[31m-      console.log('📊 Using correct Viščiukų data: 5kg × 6.30 = 29.93');[m
+[31m-    } else if (productName.includes('Bulvės')) {[m
+[31m-      quantity = 4;[m
+[31m-      unitPrice = 6.40;[m
+[31m-      totalPrice = 21.76;[m
+[31m-      unit = 'vnt'; // Bulvės are sold by unit[m
+[31m-      console.log('📊 Using correct Bulvės data: 4vnt × 6.40 = 21.76');[m
+[31m-    } else if (productName.includes('Sūrio-čili')) {[m
+[31m-      quantity = 5;[m
+[31m-      unitPrice = 8.84;[m
+[31m-      totalPrice = 37.57;[m
+[31m-      console.log('📊 Using correct Sūrio-čili data: 5kg × 8.84 = 37.57');[m
+[31m-    } else if (productName.includes('Krevetės')) {[m
+[31m-      quantity = 2;[m
+[31m-      unitPrice = 11.50;[m
+[31m-      totalPrice = 19.55;[m
+[31m-      console.log('📊 Using correct Krevetės data: 2kg × 11.50 = 19.55');[m
+[32m+[m[32m  private static parseNumber(value: unknown): number {[m
+[32m+[m[32m    if (typeof value === 'number') {[m
+[32m+[m[32m      return value;[m
+     }[m
+[31m-    [m
+[31m-    // 2. Unit - extract from product name weight specification[m
+[31m-    const weightMatch = productName.match(/(\d+[\.,]?\d*)\s*kg/i);[m
+[31m-    if (weightMatch) {[m
+[31m-      // Product specifies weight per unit (e.g., "1kg", "1,5kg", "4x2.5kg")[m
+[31m-      unit = 'kg';[m
+[31m-      const kgPerUnit = parseFloat(weightMatch[1].replace(',', '.'));[m
+[31m-      console.log('📏 Weight per unit from product name:', kgPerUnit, 'kg');[m
+[31m-    } else {[m
+[31m-      unit = 'kg'; // Default for food products[m
+[32m+[m[32m    if (typeof value === 'string') {[m
+[32m+[m[32m      const cleaned = value[m
+[32m+[m[32m        .replace(/[^0-9,.-]/g, '')[m
+[32m+[m[32m        .replace(',', '.')[m
+[32m+[m[32m        .trim();[m
+[32m+[m[32m      const parsed = parseFloat(cleaned);[m
+[32m+[m[32m      return Number.isFinite(parsed) ? parsed : 0;[m
+     }[m
+[31m-    [m
+[31m-    console.log('💰 Final extracted data:', { [m
+[31m-      quantity, [m
+[31m-      unit, [m
+[31m-      unitPrice, [m
+[31m-      totalPrice[m
+[31m-    });[m
+[31m-    [m
+[31m-    return {[m
+[31m-      quantity,[m
+[31m-      unit,[m
+[31m-      unitPrice: Math.round(unitPrice * 100) / 100,[m
+[31m-      totalPrice: Math.round(totalPrice * 100) / 100[m
+[32m+[m[32m    return 0;[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  private static round(value: number | undefined): number {[m
+[32m+[m[32m    if (typeof value !== 'number' || !Number.isFinite(value)) {[m
+[32m+[m[32m      return 0;[m
+[32m+[m[32m    }[m
+[32m+[m[32m    return Math.round(value * 100) / 100;[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  private static cleanProductName(name: string): string {[m
+[32m+[m[32m    return name[m
+[32m+[m[32m      .replace(/\s+/g, ' ')[m
+[32m+[m[32m      .replace(/\s+,/g, ',')[m
+[32m+[m[32m      .replace(/\s+\./g, '.')[m
+[32m+[m[32m      .trim();[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  private static stripDiacritics(value: string): string {[m
+[32m+[m[32m    return value[m
+[32m+[m[32m      .normalize('NFD')[m
+[32m+[m[32m      .replace(/[\u0300-\u036f]/g, '')[m
+[32m+[m[32m      .toLowerCase();[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  private static isCountryWord(value: string): boolean {[m
+[32m+[m[32m    const normalized = this.stripDiacritics(value).replace(/[^a-z]/g, '');[m
+[32m+[m[32m    if (!normalized) {[m
+[32m+[m[32m      return false;[m
+[32m+[m[32m    }[m
+[32m+[m[32m    if (COUNTRY_KEYWORDS.has(normalized)) {[m
+[32m+[m[32m      return true;[m
+[32m+[m[32m    }[m
+[32m+[m[32m    // Try collapsing spaces in multi-word countries (e.g., "great britain")[m
+[32m+[m[32m    return COUNTRY_KEYWORDS.has(normalized.replace(/\s+/g, ''));[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  private static removeTrailingCountry(tokens: string[]): void {[m
+[32m+[m[32m    while (tokens.length) {[m
+[32m+[m[32m      const last = tokens[tokens.length - 1];[m
+[32m+[m[32m      if (this.isCountryWord(last)) {[m
+[32m+[m[32m        tokens.pop();[m
+[32m+[m[32m        continue;[m
+[32m+[m[32m      }[m
+[32m+[m[32m      if (tokens.length >= 2) {[m
+[32m+[m[32m        const combined = `${tokens[tokens.length - 2]} ${tokens[tokens.length - 1]}`;[m
