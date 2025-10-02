@@ -128,6 +128,8 @@ export function InvoiceBatchReviewPage() {
   };
 
   const groupProductsAcrossInvoices = () => {
+    console.log('🔍 Starting product grouping for batch results:', batchResults.length);
+    
     // First pass: collect all line items with cleaned names
     const allItems: Array<{
       originalName: string;
@@ -140,8 +142,18 @@ export function InvoiceBatchReviewPage() {
     }> = [];
 
     batchResults.forEach((batchItem, invoiceIndex) => {
+      console.log(`📄 Invoice ${invoiceIndex + 1}: ${batchItem.result.lineItems?.length || 0} line items`);
+      
+      if (!batchItem.result.lineItems || batchItem.result.lineItems.length === 0) {
+        console.warn(`⚠️ Invoice ${invoiceIndex + 1} has no line items!`);
+        return;
+      }
+      
       batchItem.result.lineItems.forEach((lineItem, lineItemIndex) => {
-        if (!lineItem.productName) return;
+        if (!lineItem.productName) {
+          console.warn(`⚠️ Line item ${lineItemIndex} in invoice ${invoiceIndex + 1} has no product name`);
+          return;
+        }
 
         const cleanedName = cleanProductName(lineItem.productName);
         const normalizedName = normalizeProductName(lineItem.productName);
@@ -158,6 +170,8 @@ export function InvoiceBatchReviewPage() {
         });
       });
     });
+    
+    console.log(`✅ Collected ${allItems.length} total line items from all invoices`);
 
     // Second pass: smart grouping with similarity matching
     const productGroups = new Map<string, GroupedProduct>();
@@ -451,8 +465,38 @@ export function InvoiceBatchReviewPage() {
           Product Groups ({groupedProducts.length} unique products)
         </h2>
         
-        <div className="space-y-4">
-          {groupedProducts.map((group, index) => (
+        {groupedProducts.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <div className="text-4xl mb-4">📦</div>
+            <p className="text-lg font-medium mb-2">No products found in invoices</p>
+            <p className="text-sm">
+              The invoices may not have been processed correctly, or product extraction failed.
+              <br />
+              Try re-processing the invoices or check the console for errors.
+            </p>
+            <button
+              onClick={() => {
+                console.log('🔍 Debug Info:', {
+                  batchResultsCount: batchResults?.length || 0,
+                  batchResults: batchResults?.map((br, i) => ({
+                    invoice: i + 1,
+                    lineItemsCount: br.result?.lineItems?.length || 0,
+                    lineItems: br.result?.lineItems?.map(li => ({
+                      productName: li.productName,
+                      quantity: li.quantity,
+                      unit: li.unit
+                    }))
+                  }))
+                });
+              }}
+              className="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm"
+            >
+              🔍 Show Debug Info (Check Console)
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {groupedProducts.map((group, index) => (
             <div key={index} className="border border-gray-200 rounded-lg overflow-hidden">
               {/* Header */}
               <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
@@ -613,7 +657,8 @@ export function InvoiceBatchReviewPage() {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Action Buttons */}
