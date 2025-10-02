@@ -323,19 +323,26 @@ export class TextExtractor {
       remainder = remainder.slice(0, expiryMatch.index).trim();
     }
 
-    // Try two patterns:
-    // Pattern 1: name ... quantity unit unitPrice subtotal [discount] total (with discount column)
-    // Pattern 2: name ... quantity unit unitPrice total (no discount/subtotal - simpler format)
+    // Try three patterns to handle different invoice formats:
+    // Pattern 1: name ... quantity unit unitPrice subtotal discount total (full format with explicit discount)
+    // Pattern 2: name ... quantity unit unitPrice subtotal total (optional discount between subtotal and total)
+    // Pattern 3: name ... quantity unit unitPrice total (simplest format - no subtotal/discount)
     
-    const tailPatternWithDiscount = /^(.+?)\s+(\d+[.,]?\d*)\s+(kg|vnt|pcs|l|ml)\s+(\d+[.,]?\d*)\s+(\d+[.,]?\d*)(?:\s+(\d+[.,]?\d*))?\s+(\d+[.,]?\d*)$/iu;
+    const tailPatternFull = /^(.+?)\s+(\d+[.,]?\d*)\s+(kg|vnt|pcs|l|ml)\s+(\d+[.,]?\d*)\s+(\d+[.,]?\d*)\s+(\d+[.,]?\d*)\s+(\d+[.,]?\d*)$/iu;
+    const tailPatternWithOptionalDiscount = /^(.+?)\s+(\d+[.,]?\d*)\s+(kg|vnt|pcs|l|ml)\s+(\d+[.,]?\d*)\s+(\d+[.,]?\d*)(?:\s+(\d+[.,]?\d*))?\s+(\d+[.,]?\d*)$/iu;
     const tailPatternSimple = /^(.+?)\s+(\d+[.,]?\d*)\s+(kg|vnt|pcs|l|ml)\s+(\d+[.,]?\d*)\s+(\d+[.,]?\d*)$/iu;
     
-    let match = remainder.match(tailPatternWithDiscount);
-    let isSimpleFormat = false;
+    let match = remainder.match(tailPatternFull);
+    let formatType: 'full' | 'optional' | 'simple' = 'full';
+    
+    if (!match) {
+      match = remainder.match(tailPatternWithOptionalDiscount);
+      formatType = 'optional';
+    }
     
     if (!match) {
       match = remainder.match(tailPatternSimple);
-      isSimpleFormat = true;
+      formatType = 'simple';
     }
 
     if (!match) {
@@ -345,14 +352,17 @@ export class TextExtractor {
 
     let leadingText, quantityStr, unitStr, unitPriceStr, subtotalStr, discountStr, totalStr;
     
-    if (isSimpleFormat) {
+    if (formatType === 'full') {
+      // Full format: name quantity unit unitPrice subtotal discount total
+      [, leadingText, quantityStr, unitStr, unitPriceStr, subtotalStr, discountStr, totalStr] = match;
+    } else if (formatType === 'optional') {
+      // Optional discount format: name quantity unit unitPrice subtotal [discount] total
+      [, leadingText, quantityStr, unitStr, unitPriceStr, subtotalStr, discountStr, totalStr] = match;
+    } else {
       // Simple format: name quantity unit unitPrice total
       [, leadingText, quantityStr, unitStr, unitPriceStr, totalStr] = match;
       subtotalStr = totalStr; // No discount, so subtotal = total
       discountStr = undefined;
-    } else {
-      // Full format with discount
-      [, leadingText, quantityStr, unitStr, unitPriceStr, subtotalStr, discountStr, totalStr] = match;
     }
 
     const quantity = this.parseNumber(quantityStr);
