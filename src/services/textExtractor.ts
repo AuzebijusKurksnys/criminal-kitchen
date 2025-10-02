@@ -317,9 +317,13 @@ export class TextExtractor {
     }
 
     let expiryDate: string | undefined;
-    const expiryMatch = remainder.match(/(\d{4}-\d{2}-\d{2})\s*$/);
+    const expiryMatch = remainder.match(/(\d{4}-\d{2}-\d{2})/);
     if (expiryMatch) {
       expiryDate = expiryMatch[1];
+      // Keep only everything up to and including the expiry date, remove anything after
+      const endIndex = (expiryMatch.index || 0) + expiryMatch[0].length;
+      remainder = remainder.slice(0, endIndex).trim();
+      // Now remove the expiry date from the end so it doesn't interfere with parsing
       remainder = remainder.slice(0, expiryMatch.index).trim();
     }
 
