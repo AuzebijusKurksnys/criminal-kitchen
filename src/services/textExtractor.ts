@@ -323,25 +323,37 @@ export class TextExtractor {
       remainder = remainder.slice(0, expiryMatch.index).trim();
     }
 
-    // Expecting pattern: name ... quantity unit unitPrice subtotal [discount] total
-    const tailPattern = /^(.+?)\s+(\d+[.,]?\d*)\s+(kg|vnt|pcs|l|ml)\s+(\d+[.,]?\d*)\s+(\d+[.,]?\d*)(?:\s+(\d+[.,]?\d*))?\s+(\d+[.,]?\d*)$/iu;
-    const match = remainder.match(tailPattern);
+    // Try two patterns:
+    // Pattern 1: name ... quantity unit unitPrice subtotal [discount] total (with discount column)
+    // Pattern 2: name ... quantity unit unitPrice total (no discount/subtotal - simpler format)
+    
+    const tailPatternWithDiscount = /^(.+?)\s+(\d+[.,]?\d*)\s+(kg|vnt|pcs|l|ml)\s+(\d+[.,]?\d*)\s+(\d+[.,]?\d*)(?:\s+(\d+[.,]?\d*))?\s+(\d+[.,]?\d*)$/iu;
+    const tailPatternSimple = /^(.+?)\s+(\d+[.,]?\d*)\s+(kg|vnt|pcs|l|ml)\s+(\d+[.,]?\d*)\s+(\d+[.,]?\d*)$/iu;
+    
+    let match = remainder.match(tailPatternWithDiscount);
+    let isSimpleFormat = false;
+    
+    if (!match) {
+      match = remainder.match(tailPatternSimple);
+      isSimpleFormat = true;
+    }
 
     if (!match) {
       console.warn('⚠️ Unable to parse product row tail:', row);
       return undefined;
     }
 
-    const [
-      ,
-      leadingText,
-      quantityStr,
-      unitStr,
-      unitPriceStr,
-      subtotalStr,
-      discountStr,
-      totalStr
-    ] = match;
+    let leadingText, quantityStr, unitStr, unitPriceStr, subtotalStr, discountStr, totalStr;
+    
+    if (isSimpleFormat) {
+      // Simple format: name quantity unit unitPrice total
+      [, leadingText, quantityStr, unitStr, unitPriceStr, totalStr] = match;
+      subtotalStr = totalStr; // No discount, so subtotal = total
+      discountStr = undefined;
+    } else {
+      // Full format with discount
+      [, leadingText, quantityStr, unitStr, unitPriceStr, subtotalStr, discountStr, totalStr] = match;
+    }
 
     const quantity = this.parseNumber(quantityStr);
     const unitPrice = this.parseNumber(unitPriceStr);
