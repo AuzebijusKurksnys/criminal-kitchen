@@ -71,6 +71,47 @@ export function InvoicesPage() {
     setFilteredInvoices(filtered);
   };
 
+  const handleMergeDuplicates = async () => {
+    try {
+      // Group invoices by supplier + invoice number
+      const invoiceGroups = new Map<string, Invoice[]>();
+      
+      invoices.forEach(invoice => {
+        const key = `${invoice.supplierId}_${invoice.invoiceNumber}`;
+        if (!invoiceGroups.has(key)) {
+          invoiceGroups.set(key, []);
+        }
+        invoiceGroups.get(key)!.push(invoice);
+      });
+
+      let mergedCount = 0;
+      
+      // For each group, keep only the most recent invoice
+      for (const [key, group] of invoiceGroups) {
+        if (group.length > 1) {
+          // Sort by createdAt descending (most recent first)
+          group.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          
+          // Delete all except the first (most recent)
+          for (let i = 1; i < group.length; i++) {
+            await deleteInvoice(group[i].id);
+            mergedCount++;
+          }
+        }
+      }
+
+      if (mergedCount > 0) {
+        showToast('success', `Merged ${mergedCount} duplicate invoice(s)`);
+        await loadInvoices();
+      } else {
+        showToast('info', 'No duplicate invoices found');
+      }
+    } catch (error) {
+      console.error('Error merging duplicates:', error);
+      showToast('error', 'Failed to merge duplicate invoices');
+    }
+  };
+
   const handleStatusChange = async (invoiceId: string, newStatus: InvoiceStatus) => {
     try {
       await updateInvoice(invoiceId, { status: newStatus });
@@ -311,6 +352,14 @@ export function InvoicesPage() {
           ]}
           className="w-40"
         />
+
+        <button
+          onClick={handleMergeDuplicates}
+          className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 whitespace-nowrap"
+          disabled={invoices.length === 0}
+        >
+          🔀 Merge Duplicates
+        </button>
       </div>
 
       {/* Bulk Actions */}
