@@ -402,8 +402,12 @@ export class TextExtractor {
     }
 
     const productName = this.cleanProductName(rawName)
+      // Remove leading barcodes/SKU codes (8-13 digit numbers at start, often with spaces)
+      .replace(/^\d{8,13}\s+\d{0,2}\s*/g, '')
+      .replace(/^\d{8,13}\s+/g, '')
+      // Remove country names
       .replace(/\b(Latvija|Latvia)\b.*$/i, '')
-      .replace(/\b(Lietuva|Lithuania|Ukraine|Netherlands|Olandija|Holland)\b.*$/i, '')
+      .replace(/\b(Lietuva|Lithuania|Ukraine|Netherlands|Olandija|Holland|India)\b.*$/i, '')
       .replace(/\s{2,}/g, ' ')
       .trim();
 
