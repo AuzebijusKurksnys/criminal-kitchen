@@ -27,6 +27,7 @@ export function InvoicesPage() {
   });
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [expandedSuppliers, setExpandedSuppliers] = useState<Set<string>>(new Set());
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -71,13 +72,12 @@ export function InvoicesPage() {
     setFilteredInvoices(filtered);
   };
 
-  // Group invoices by supplier
+  // Group invoices by supplier and then by month
   const groupedBySupplier = () => {
     const groups = new Map<string, (Invoice & { supplierName?: string })[]>();
     
     filteredInvoices.forEach(invoice => {
       const supplierKey = invoice.supplierId;
-      const supplierName = invoice.supplierName || 'Unknown Supplier';
       
       if (!groups.has(supplierKey)) {
         groups.set(supplierKey, []);
@@ -87,16 +87,47 @@ export function InvoicesPage() {
 
     // Convert to array and sort by supplier name
     return Array.from(groups.entries())
-      .map(([supplierId, invoices]) => ({
-        supplierId,
-        supplierName: invoices[0]?.supplierName || 'Unknown Supplier',
-        invoices: invoices.sort((a, b) => 
-          new Date(b.invoiceDate || b.createdAt).getTime() - 
-          new Date(a.invoiceDate || a.createdAt).getTime()
-        ),
-        totalAmount: invoices.reduce((sum, inv) => sum + (inv.totalInclVat || 0), 0),
-        count: invoices.length
-      }))
+      .map(([supplierId, invoices]) => {
+        // Group invoices by month
+        const monthGroups = new Map<string, (Invoice & { supplierName?: string })[]>();
+        
+        invoices.forEach(invoice => {
+          const date = new Date(invoice.invoiceDate || invoice.createdAt);
+          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          
+          if (!monthGroups.has(monthKey)) {
+            monthGroups.set(monthKey, []);
+          }
+          monthGroups.get(monthKey)!.push(invoice);
+        });
+
+        // Convert month groups to array and sort by date (newest first)
+        const months = Array.from(monthGroups.entries())
+          .map(([monthKey, monthInvoices]) => {
+            const [year, month] = monthKey.split('-');
+            const date = new Date(parseInt(year), parseInt(month) - 1);
+            
+            return {
+              monthKey,
+              monthLabel: date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
+              invoices: monthInvoices.sort((a, b) => 
+                new Date(b.invoiceDate || b.createdAt).getTime() - 
+                new Date(a.invoiceDate || a.createdAt).getTime()
+              ),
+              totalAmount: monthInvoices.reduce((sum, inv) => sum + (inv.totalInclVat || 0), 0),
+              count: monthInvoices.length
+            };
+          })
+          .sort((a, b) => b.monthKey.localeCompare(a.monthKey)); // Newest month first
+
+        return {
+          supplierId,
+          supplierName: invoices[0]?.supplierName || 'Unknown Supplier',
+          months,
+          totalAmount: invoices.reduce((sum, inv) => sum + (inv.totalInclVat || 0), 0),
+          count: invoices.length
+        };
+      })
       .sort((a, b) => a.supplierName.localeCompare(b.supplierName));
   };
 
@@ -110,13 +141,32 @@ export function InvoicesPage() {
     setExpandedSuppliers(newExpanded);
   };
 
+  const toggleMonth = (monthKey: string) => {
+    const newExpanded = new Set(expandedMonths);
+    if (newExpanded.has(monthKey)) {
+      newExpanded.delete(monthKey);
+    } else {
+      newExpanded.add(monthKey);
+    }
+    setExpandedMonths(newExpanded);
+  };
+
   const expandAll = () => {
-    const allSupplierIds = groupedBySupplier().map(g => g.supplierId);
+    const grouped = groupedBySupplier();
+    const allSupplierIds = grouped.map(g => g.supplierId);
+    const allMonthKeys: string[] = [];
+    grouped.forEach(supplier => {
+      supplier.months.forEach(month => {
+        allMonthKeys.push(`${supplier.supplierId}_${month.monthKey}`);
+      });
+    });
     setExpandedSuppliers(new Set(allSupplierIds));
+    setExpandedMonths(new Set(allMonthKeys));
   };
 
   const collapseAll = () => {
     setExpandedSuppliers(new Set());
+    setExpandedMonths(new Set());
   };
 
   const handleStatusChange = async (invoiceId: string, newStatus: InvoiceStatus) => {
@@ -337,7 +387,7 @@ export function InvoicesPage() {
       ) : (
         <div className="space-y-4">
           {groupedBySupplier().map(group => {
-            const isExpanded = expandedSuppliers.has(group.supplierId);
+            const isSupplierExpanded = expandedSuppliers.has(group.supplierId);
             
             return (
               <div key={group.supplierId} className="bg-white rounded-lg shadow-sm border overflow-hidden">
@@ -347,7 +397,7 @@ export function InvoicesPage() {
                   className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center space-x-4">
-                    <span className="text-2xl">{isExpanded ? '📂' : '📁'}</span>
+                    <span className="text-2xl">{isSupplierExpanded ? '📂' : '📁'}</span>
                     <div className="text-left">
                       <h3 className="text-lg font-semibold text-gray-900">{group.supplierName}</h3>
                       <p className="text-sm text-gray-500">
@@ -356,90 +406,121 @@ export function InvoicesPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className="text-gray-400">{isExpanded ? '▼' : '▶'}</span>
+                    <span className="text-gray-400">{isSupplierExpanded ? '▼' : '▶'}</span>
                   </div>
                 </button>
 
-                {/* Invoices List */}
-                {isExpanded && (
+                {/* Month Folders */}
+                {isSupplierExpanded && (
                   <div className="border-t bg-gray-50">
-                    {group.invoices.map(invoice => (
-                      <div
-                        key={invoice.id}
-                        className="px-6 py-4 border-b last:border-b-0 hover:bg-white transition-colors"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4 flex-1">
-                            <input
-                              type="checkbox"
-                              checked={selectedInvoices.has(invoice.id)}
-                              onChange={() => handleSelectInvoice(invoice.id)}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            />
-                            
-                            <div className="flex-1 grid grid-cols-6 gap-4">
-                              <div>
-                                <div className="text-sm font-medium text-gray-900">{invoice.invoiceNumber}</div>
-                                <div className="text-xs text-gray-500">
-                                  {invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString() : '-'}
-                                </div>
-                              </div>
-                              
-                              <div>
-                                <div className="text-sm text-gray-700">{formatPrice(invoice.totalInclVat || 0, invoice.currency || 'EUR')}</div>
-                                <div className="text-xs text-gray-500">incl. VAT</div>
-                              </div>
-                              
-                              <div>
-                                <div className="text-sm text-gray-700">{formatPrice(invoice.totalExclVat || 0, invoice.currency || 'EUR')}</div>
-                                <div className="text-xs text-gray-500">excl. VAT</div>
-                              </div>
-                              
-                              <div>
-                                <div className="text-sm text-gray-700">
-                                  {(invoice.discountAmount || 0) > 0 ? formatPrice(invoice.discountAmount || 0, invoice.currency || 'EUR') : '-'}
-                                </div>
-                                <div className="text-xs text-gray-500">discount</div>
-                              </div>
-                              
-                              <div>
-                                <Select
-                                  value={invoice.status}
-                                  onChange={(value) => handleStatusChange(invoice.id, value as InvoiceStatus)}
-                                  options={[
-                                    { value: 'pending', label: 'Pending' },
-                                    { value: 'processing', label: 'Processing' },
-                                    { value: 'review', label: 'Review' },
-                                    { value: 'approved', label: 'Approved' },
-                                    { value: 'rejected', label: 'Rejected' }
-                                  ]}
-                                  className="w-32"
-                                />
-                              </div>
-                              
-                              <div className="flex space-x-2 justify-end">
-                                {invoice.filePath && (
-                                  <button
-                                    onClick={() => handleViewFile(invoice)}
-                                    className="text-blue-600 hover:text-blue-900 text-sm px-2 py-1"
-                                    title="View/Download file"
-                                  >
-                                    📎 File
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => setDeleteConfirm({ show: true, invoice })}
-                                  className="text-red-600 hover:text-red-900 text-sm px-2 py-1"
-                                  title="Delete invoice"
-                                >
-                                  🗑️
-                                </button>
+                    {group.months.map(month => {
+                      const monthKey = `${group.supplierId}_${month.monthKey}`;
+                      const isMonthExpanded = expandedMonths.has(monthKey);
+                      
+                      return (
+                        <div key={monthKey} className="border-b last:border-b-0">
+                          {/* Month Subfolder Header */}
+                          <button
+                            onClick={() => toggleMonth(monthKey)}
+                            className="w-full px-8 py-3 flex items-center justify-between hover:bg-gray-100 transition-colors"
+                          >
+                            <div className="flex items-center space-x-3">
+                              <span className="text-lg">{isMonthExpanded ? '📂' : '📁'}</span>
+                              <div className="text-left">
+                                <h4 className="text-md font-medium text-gray-800">{month.monthLabel}</h4>
+                                <p className="text-xs text-gray-500">
+                                  {month.count} invoice{month.count !== 1 ? 's' : ''} · {formatPrice(month.totalAmount, 'EUR')}
+                                </p>
                               </div>
                             </div>
-                          </div>
+                            <span className="text-gray-400 text-sm">{isMonthExpanded ? '▼' : '▶'}</span>
+                          </button>
+
+                          {/* Invoices in Month */}
+                          {isMonthExpanded && (
+                            <div className="bg-white">
+                              {month.invoices.map(invoice => (
+                                <div
+                                  key={invoice.id}
+                                  className="px-10 py-4 border-b last:border-b-0 hover:bg-gray-50 transition-colors"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-4 flex-1">
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedInvoices.has(invoice.id)}
+                                        onChange={() => handleSelectInvoice(invoice.id)}
+                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                      />
+                                      
+                                      <div className="flex-1 grid grid-cols-6 gap-4">
+                                        <div>
+                                          <div className="text-sm font-medium text-gray-900">{invoice.invoiceNumber}</div>
+                                          <div className="text-xs text-gray-500">
+                                            {invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString() : '-'}
+                                          </div>
+                                        </div>
+                                        
+                                        <div>
+                                          <div className="text-sm text-gray-700">{formatPrice(invoice.totalInclVat || 0, invoice.currency || 'EUR')}</div>
+                                          <div className="text-xs text-gray-500">incl. VAT</div>
+                                        </div>
+                                        
+                                        <div>
+                                          <div className="text-sm text-gray-700">{formatPrice(invoice.totalExclVat || 0, invoice.currency || 'EUR')}</div>
+                                          <div className="text-xs text-gray-500">excl. VAT</div>
+                                        </div>
+                                        
+                                        <div>
+                                          <div className="text-sm text-gray-700">
+                                            {(invoice.discountAmount || 0) > 0 ? formatPrice(invoice.discountAmount || 0, invoice.currency || 'EUR') : '-'}
+                                          </div>
+                                          <div className="text-xs text-gray-500">discount</div>
+                                        </div>
+                                        
+                                        <div>
+                                          <Select
+                                            value={invoice.status}
+                                            onChange={(value) => handleStatusChange(invoice.id, value as InvoiceStatus)}
+                                            options={[
+                                              { value: 'pending', label: 'Pending' },
+                                              { value: 'processing', label: 'Processing' },
+                                              { value: 'review', label: 'Review' },
+                                              { value: 'approved', label: 'Approved' },
+                                              { value: 'rejected', label: 'Rejected' }
+                                            ]}
+                                            className="w-32"
+                                          />
+                                        </div>
+                                        
+                                        <div className="flex space-x-2 justify-end">
+                                          {invoice.filePath && (
+                                            <button
+                                              onClick={() => handleViewFile(invoice)}
+                                              className="text-blue-600 hover:text-blue-900 text-sm px-2 py-1"
+                                              title="View/Download file"
+                                            >
+                                              📎 File
+                                            </button>
+                                          )}
+                                          <button
+                                            onClick={() => setDeleteConfirm({ show: true, invoice })}
+                                            className="text-red-600 hover:text-red-900 text-sm px-2 py-1"
+                                            title="Delete invoice"
+                                          >
+                                            🗑️
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
