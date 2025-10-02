@@ -87,12 +87,19 @@ export function InvoiceBatchReviewPage() {
   const normalizeProductName = (name: string): string => {
     const cleaned = cleanProductName(name);
     
-    // More conservative normalization for grouping
+    // More aggressive normalization for better grouping
     return cleaned
       .toLowerCase()
-      .replace(/\b(kg|g|l|ml|pcs|piece|pc|vnt|pack|unit|units|pack|packet|box|bottle|can)\b/g, '') // Remove units
-      .replace(/\b\d+\s*(kg|g|l|ml|pcs|piece|pc|vnt|pack|unit|units|pack|packet|box|bottle|can)\b/g, '') // Remove quantity+unit
-      .replace(/\b\d+(\.\d+)?\s*%?\b/g, '') // Remove standalone numbers and percentages
+      // Normalize common abbreviations
+      .replace(/\bvišč(iukų)?\b/g, 'visciuku') // višč/viščiukų -> visciuku
+      .replace(/\bkrūtinėlių\s*filė\b/g, 'file') // krūtinėlių filė -> file
+      .replace(/\bbroilerių\b/g, 'broileriu')
+      // Remove units
+      .replace(/\b(kg|g|l|ml|pcs|piece|pc|vnt|pack|unit|units|pack|packet|box|bottle|can|šaldyta|šaldytos|atšaldyta)\b/g, '')
+      // Remove quantity+unit patterns
+      .replace(/\b\d+x\d+[.,]?\d*\s*(kg|g|l|ml|pcs|piece|pc|vnt)\b/g, '')
+      .replace(/\b\d+\s*(kg|g|l|ml|pcs|piece|pc|vnt|pack|unit|units|pack|packet|box|bottle|can)\b/g, '')
+      .replace(/\b\d+(\.\d+)?\s*%?\b/g, '') // Remove standalone numbers
       .replace(/\s+/g, ' ')
       .trim();
   };
