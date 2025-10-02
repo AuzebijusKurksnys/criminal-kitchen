@@ -314,15 +314,15 @@ export function InvoicesPage() {
     <div>
       <div className="mb-8 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Invoices</h1>
-          <p className="mt-2 text-gray-600">
+          <h1 className="text-3xl font-semibold text-gray-100">Invoices</h1>
+          <p className="mt-2 text-gray-400">
             Manage supplier invoices and track inventory updates
           </p>
         </div>
         
         <button
           onClick={() => navigate('/invoices/upload')}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-500 hover:shadow-lg hover:shadow-blue-500/20 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
         >
           📄 Upload Invoice
         </button>
@@ -353,14 +353,14 @@ export function InvoicesPage() {
 
         <button
           onClick={expandAll}
-          className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 whitespace-nowrap"
+          className="px-4 py-2 bg-gray-800 text-gray-200 border border-gray-700 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-600 whitespace-nowrap transition-all"
         >
           📂 Expand All
         </button>
 
         <button
           onClick={collapseAll}
-          className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 whitespace-nowrap"
+          className="px-4 py-2 bg-gray-800 text-gray-200 border border-gray-700 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-600 whitespace-nowrap transition-all"
         >
           📁 Collapse All
         </button>
@@ -368,13 +368,13 @@ export function InvoicesPage() {
 
       {/* Bulk Actions */}
       {selectedInvoices.size > 0 && (
-        <div className="mb-4 flex items-center justify-between bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <div className="text-sm text-blue-700">
+        <div className="mb-4 flex items-center justify-between bg-blue-500/10 p-4 rounded-xl border border-blue-500/30">
+          <div className="text-sm text-blue-400">
             {selectedInvoices.size} invoice{selectedInvoices.size !== 1 ? 's' : ''} selected
           </div>
           <button
             onClick={() => setBulkDeleteConfirm(true)}
-            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-normal rounded-lg text-white bg-red-600 hover:bg-red-500 hover:shadow-lg hover:shadow-red-500/20 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all"
           >
             🗑️ Delete Selected ({selectedInvoices.size})
           </button>
@@ -390,17 +390,17 @@ export function InvoicesPage() {
             .reduce((sum, inv) => sum + (inv.totalInclVat || 0), 0);
           
           return (
-            <div key={status} className="bg-white p-4 rounded-lg shadow-sm border">
+            <div key={status} className="bg-gray-900 p-4 rounded-xl shadow-xl border border-gray-800">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">
+                  <p className="text-sm font-normal text-gray-400">
                     {status.charAt(0).toUpperCase() + status.slice(1)}
                   </p>
-                  <p className="text-2xl font-bold text-gray-900">{count}</p>
+                  <p className="text-2xl font-semibold text-gray-100">{count}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-500">Total</p>
-                  <p className="text-lg font-semibold text-gray-900">
+                  <p className="text-lg font-normal text-gray-200">
                     {formatPrice(total, 'EUR')}
                   </p>
                 </div>
@@ -412,10 +412,10 @@ export function InvoicesPage() {
 
       {/* Invoices Grouped by Supplier */}
       {filteredInvoices.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+        <div className="text-center py-12 bg-gray-900 rounded-xl shadow-xl border border-gray-800">
           <div className="text-4xl mb-4">📄</div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No invoices found</h3>
-          <p className="text-gray-500 mb-4">
+          <h3 className="text-lg font-normal text-gray-200 mb-2">No invoices found</h3>
+          <p className="text-gray-400 mb-4">
             {searchTerm || statusFilter !== 'all' 
               ? 'Try adjusting your filters or search terms'
               : 'Upload your first invoice to get started'
@@ -424,7 +424,7 @@ export function InvoicesPage() {
           {!searchTerm && statusFilter === 'all' && (
             <button
               onClick={() => navigate('/invoices/upload')}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-500 hover:shadow-lg hover:shadow-blue-500/20 transition-all"
             >
               Upload First Invoice
             </button>
@@ -436,85 +436,85 @@ export function InvoicesPage() {
             const isSupplierExpanded = expandedSuppliers.has(group.supplierId);
             
             return (
-              <div key={group.supplierId} className="bg-white rounded-lg shadow-sm border overflow-hidden">
+              <div key={group.supplierId} className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 overflow-hidden">
                 {/* Supplier Folder Header */}
                 <button
                   onClick={() => toggleSupplier(group.supplierId)}
-                  className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                  className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-800/50 transition-all"
                 >
                   <div className="flex items-center space-x-4">
                     <span className="text-2xl">{isSupplierExpanded ? '📂' : '📁'}</span>
                     <div className="text-left">
-                      <h3 className="text-lg font-semibold text-gray-900">{group.supplierName}</h3>
-                      <p className="text-sm text-gray-500">
+                      <h3 className="text-lg font-normal text-gray-100">{group.supplierName}</h3>
+                      <p className="text-sm text-gray-400">
                         {group.count} invoice{group.count !== 1 ? 's' : ''} · Total: {formatPrice(group.totalAmount, 'EUR')}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className="text-gray-400">{isSupplierExpanded ? '▼' : '▶'}</span>
+                    <span className="text-gray-500">{isSupplierExpanded ? '▼' : '▶'}</span>
                   </div>
                 </button>
 
                 {/* Year Folders */}
                 {isSupplierExpanded && (
-                  <div className="border-t bg-gray-50">
+                  <div className="border-t border-gray-800 bg-gray-900/50">
                     {group.years.map(year => {
                       const yearKey = `${group.supplierId}_${year.year}`;
                       const isYearExpanded = expandedYears.has(yearKey);
                       
                       return (
-                        <div key={yearKey} className="border-b last:border-b-0">
+                        <div key={yearKey} className="border-b border-gray-800 last:border-b-0">
                           {/* Year Subfolder Header */}
                           <button
                             onClick={() => toggleYear(yearKey)}
-                            className="w-full px-8 py-3 flex items-center justify-between hover:bg-gray-100 transition-colors"
+                            className="w-full px-8 py-3 flex items-center justify-between hover:bg-gray-800/30 transition-all"
                           >
                             <div className="flex items-center space-x-3">
                               <span className="text-xl">{isYearExpanded ? '📂' : '📁'}</span>
                               <div className="text-left">
-                                <h4 className="text-md font-semibold text-gray-800">{year.yearLabel}</h4>
-                                <p className="text-xs text-gray-500">
+                                <h4 className="text-md font-normal text-gray-200">{year.yearLabel}</h4>
+                                <p className="text-xs text-gray-400">
                                   {year.count} invoice{year.count !== 1 ? 's' : ''} · {formatPrice(year.totalAmount, 'EUR')}
                                 </p>
                               </div>
                             </div>
-                            <span className="text-gray-400 text-sm">{isYearExpanded ? '▼' : '▶'}</span>
+                            <span className="text-gray-500 text-sm">{isYearExpanded ? '▼' : '▶'}</span>
                           </button>
 
                           {/* Month Folders within Year */}
                           {isYearExpanded && (
-                            <div className="bg-gray-100">
+                            <div className="bg-gray-900/80">
                               {year.months.map(month => {
                                 const monthKey = `${yearKey}_${month.monthKey}`;
                                 const isMonthExpanded = expandedMonths.has(monthKey);
                                 
                                 return (
-                                  <div key={monthKey} className="border-b last:border-b-0">
+                                  <div key={monthKey} className="border-b border-gray-800 last:border-b-0">
                                     {/* Month Subfolder Header */}
                                     <button
                                       onClick={() => toggleMonth(monthKey)}
-                                      className="w-full px-12 py-2.5 flex items-center justify-between hover:bg-gray-200 transition-colors"
+                                      className="w-full px-12 py-2.5 flex items-center justify-between hover:bg-gray-800/20 transition-all"
                                     >
                                       <div className="flex items-center space-x-3">
                                         <span className="text-base">{isMonthExpanded ? '📂' : '📁'}</span>
                                         <div className="text-left">
-                                          <h5 className="text-sm font-medium text-gray-700">{month.monthLabel}</h5>
+                                          <h5 className="text-sm font-normal text-gray-300">{month.monthLabel}</h5>
                                           <p className="text-xs text-gray-500">
                                             {month.count} invoice{month.count !== 1 ? 's' : ''} · {formatPrice(month.totalAmount, 'EUR')}
                                           </p>
                                         </div>
                                       </div>
-                                      <span className="text-gray-400 text-xs">{isMonthExpanded ? '▼' : '▶'}</span>
+                                      <span className="text-gray-500 text-xs">{isMonthExpanded ? '▼' : '▶'}</span>
                                     </button>
 
                                     {/* Invoices in Month */}
                                     {isMonthExpanded && (
-                                      <div className="bg-white">
+                                      <div className="bg-gray-900">
                                         {month.invoices.map(invoice => (
                                 <div
                                   key={invoice.id}
-                                  className="px-10 py-4 border-b last:border-b-0 hover:bg-gray-50 transition-colors"
+                                  className="px-10 py-4 border-b border-gray-800 last:border-b-0 hover:bg-gray-800/30 transition-all"
                                 >
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center space-x-4 flex-1">
@@ -527,24 +527,24 @@ export function InvoicesPage() {
                                       
                                       <div className="flex-1 grid grid-cols-6 gap-4">
                                         <div>
-                                          <div className="text-sm font-medium text-gray-900">{invoice.invoiceNumber}</div>
+                                          <div className="text-sm font-normal text-gray-200">{invoice.invoiceNumber}</div>
                                           <div className="text-xs text-gray-500">
                                             {invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '-'}
                                           </div>
                                         </div>
                                         
                                         <div>
-                                          <div className="text-sm text-gray-700">{formatPrice(invoice.totalInclVat || 0, invoice.currency || 'EUR')}</div>
+                                          <div className="text-sm text-gray-300">{formatPrice(invoice.totalInclVat || 0, invoice.currency || 'EUR')}</div>
                                           <div className="text-xs text-gray-500">incl. VAT</div>
                                         </div>
                                         
                                         <div>
-                                          <div className="text-sm text-gray-700">{formatPrice(invoice.totalExclVat || 0, invoice.currency || 'EUR')}</div>
+                                          <div className="text-sm text-gray-300">{formatPrice(invoice.totalExclVat || 0, invoice.currency || 'EUR')}</div>
                                           <div className="text-xs text-gray-500">excl. VAT</div>
                                         </div>
                                         
                                         <div>
-                                          <div className="text-sm text-gray-700">
+                                          <div className="text-sm text-gray-300">
                                             {(invoice.discountAmount || 0) > 0 ? formatPrice(invoice.discountAmount || 0, invoice.currency || 'EUR') : '-'}
                                           </div>
                                           <div className="text-xs text-gray-500">discount</div>
@@ -569,7 +569,7 @@ export function InvoicesPage() {
                                           {invoice.filePath && (
                                             <button
                                               onClick={() => handleViewFile(invoice)}
-                                              className="text-blue-600 hover:text-blue-900 text-sm px-2 py-1"
+                                              className="text-blue-400 hover:text-blue-300 text-sm px-2 py-1 transition-colors"
                                               title="View/Download file"
                                             >
                                               📎 File
@@ -577,7 +577,7 @@ export function InvoicesPage() {
                                           )}
                                           <button
                                             onClick={() => setDeleteConfirm({ show: true, invoice })}
-                                            className="text-red-600 hover:text-red-900 text-sm px-2 py-1"
+                                            className="text-red-400 hover:text-red-300 text-sm px-2 py-1 transition-colors"
                                             title="Delete invoice"
                                           >
                                             🗑️
