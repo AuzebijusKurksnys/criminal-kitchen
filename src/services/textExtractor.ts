@@ -309,11 +309,21 @@ export class TextExtractor {
     if (!sanitized) {
       return undefined;
     }
+    
+    // Skip summary rows (just quantities without product names)
+    if (/^\d+\s+(kg|vnt|pcs|l|ml)\s+Viso/i.test(sanitized)) {
+      return undefined;
+    }
 
     let remainder = sanitized;
     const indexMatch = remainder.match(/^(\d+)\s+(.*)$/);
     if (indexMatch) {
       remainder = indexMatch[2].trim();
+    }
+    
+    // Skip if remainder is too short to be a real product
+    if (remainder.length < 10) {
+      return undefined;
     }
 
     let expiryDate: string | undefined;
