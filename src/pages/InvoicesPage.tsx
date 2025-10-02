@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table } from '../components/Table';
 import { SearchInput } from '../components/SearchInput';
 import { Select } from '../components/Select';
 import { showToast } from '../components/Toast';
@@ -27,6 +26,7 @@ export function InvoicesPage() {
     invoice: null
   });
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [expandedSuppliers, setExpandedSuppliers] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -71,45 +71,52 @@ export function InvoicesPage() {
     setFilteredInvoices(filtered);
   };
 
-  const handleMergeDuplicates = async () => {
-    try {
-      // Group invoices by supplier + invoice number
-      const invoiceGroups = new Map<string, Invoice[]>();
+  // Group invoices by supplier
+  const groupedBySupplier = () => {
+    const groups = new Map<string, (Invoice & { supplierName?: string })[]>();
+    
+    filteredInvoices.forEach(invoice => {
+      const supplierKey = invoice.supplierId;
+      const supplierName = invoice.supplierName || 'Unknown Supplier';
       
-      invoices.forEach(invoice => {
-        const key = `${invoice.supplierId}_${invoice.invoiceNumber}`;
-        if (!invoiceGroups.has(key)) {
-          invoiceGroups.set(key, []);
-        }
-        invoiceGroups.get(key)!.push(invoice);
-      });
-
-      let mergedCount = 0;
-      
-      // For each group, keep only the most recent invoice
-      for (const [key, group] of invoiceGroups) {
-        if (group.length > 1) {
-          // Sort by createdAt descending (most recent first)
-          group.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          
-          // Delete all except the first (most recent)
-          for (let i = 1; i < group.length; i++) {
-            await deleteInvoice(group[i].id);
-            mergedCount++;
-          }
-        }
+      if (!groups.has(supplierKey)) {
+        groups.set(supplierKey, []);
       }
+      groups.get(supplierKey)!.push(invoice);
+    });
 
-      if (mergedCount > 0) {
-        showToast('success', `Merged ${mergedCount} duplicate invoice(s)`);
-        await loadInvoices();
-      } else {
-        showToast('info', 'No duplicate invoices found');
-      }
-    } catch (error) {
-      console.error('Error merging duplicates:', error);
-      showToast('error', 'Failed to merge duplicate invoices');
+    // Convert to array and sort by supplier name
+    return Array.from(groups.entries())
+      .map(([supplierId, invoices]) => ({
+        supplierId,
+        supplierName: invoices[0]?.supplierName || 'Unknown Supplier',
+        invoices: invoices.sort((a, b) => 
+          new Date(b.invoiceDate || b.createdAt).getTime() - 
+          new Date(a.invoiceDate || a.createdAt).getTime()
+        ),
+        totalAmount: invoices.reduce((sum, inv) => sum + (inv.totalInclVat || 0), 0),
+        count: invoices.length
+      }))
+      .sort((a, b) => a.supplierName.localeCompare(b.supplierName));
+  };
+
+  const toggleSupplier = (supplierId: string) => {
+    const newExpanded = new Set(expandedSuppliers);
+    if (newExpanded.has(supplierId)) {
+      newExpanded.delete(supplierId);
+    } else {
+      newExpanded.add(supplierId);
     }
+    setExpandedSuppliers(newExpanded);
+  };
+
+  const expandAll = () => {
+    const allSupplierIds = groupedBySupplier().map(g => g.supplierId);
+    setExpandedSuppliers(new Set(allSupplierIds));
+  };
+
+  const collapseAll = () => {
+    setExpandedSuppliers(new Set());
   };
 
   const handleStatusChange = async (invoiceId: string, newStatus: InvoiceStatus) => {
@@ -202,111 +209,6 @@ export function InvoicesPage() {
     }
   };
 
-  // Selection state calculations
-  const isAllSelected = filteredInvoices.length > 0 && selectedInvoices.size === filteredInvoices.length;
-  const isPartiallySelected = selectedInvoices.size > 0 && selectedInvoices.size < filteredInvoices.length;
-
-  const columns = [
-    {
-      key: 'select',
-      label: (
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            checked={isAllSelected}
-            ref={input => {
-              if (input) input.indeterminate = isPartiallySelected;
-            }}
-            onChange={handleSelectAll}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-          />
-        </div>
-      ),
-      render: (_value: any, invoice: Invoice) => (
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            checked={selectedInvoices.has(invoice.id)}
-            onChange={() => handleSelectInvoice(invoice.id)}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-          />
-        </div>
-      ),
-    },
-    {
-      key: 'invoiceNumber',
-      label: 'Invoice #',
-      render: (_value: any, invoice: Invoice & { supplierName?: string }) => (
-        <div>
-          <div className="font-medium text-gray-900">{invoice?.invoiceNumber}</div>
-          <div className="text-sm text-gray-500">{invoice?.supplierName}</div>
-        </div>
-      )
-    },
-    {
-      key: 'invoiceDate',
-      label: 'Date',
-      render: (_value: any, invoice: Invoice) => invoice?.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString() : '-'
-    },
-    {
-      key: 'totalInclVat',
-      label: 'Total (incl. VAT)',
-      render: (_value: any, invoice: Invoice) => formatPrice(invoice?.totalInclVat || 0, invoice?.currency || 'EUR')
-    },
-    {
-      key: 'totalExclVat',
-      label: 'Total (excl. VAT)',
-      render: (_value: any, invoice: Invoice) => formatPrice(invoice?.totalExclVat || 0, invoice?.currency || 'EUR')
-    },
-    {
-      key: 'discountAmount',
-      label: 'Discount',
-      render: (_value: any, invoice: Invoice) => 
-        (invoice?.discountAmount || 0) > 0 ? formatPrice(invoice?.discountAmount || 0, invoice?.currency || 'EUR') : '-'
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (_value: any, invoice: Invoice) => (
-        <Select
-          value={invoice?.status}
-          onChange={(value) => handleStatusChange(invoice.id, value as InvoiceStatus)}
-          options={[
-            { value: 'pending', label: 'Pending' },
-            { value: 'processing', label: 'Processing' },
-            { value: 'review', label: 'Review' },
-            { value: 'approved', label: 'Approved' },
-            { value: 'rejected', label: 'Rejected' }
-          ]}
-          className="w-32"
-        />
-      )
-    },
-    {
-      key: 'actions',
-      label: 'Actions',
-      render: (_value: any, invoice: Invoice) => (
-        <div className="flex space-x-2">
-          {invoice?.filePath && (
-            <button
-              onClick={() => handleViewFile(invoice)}
-              className="text-blue-600 hover:text-blue-900 text-sm"
-              title="View/Download file"
-            >
-              📎 File
-            </button>
-          )}
-          <button
-            onClick={() => setDeleteConfirm({ show: true, invoice })}
-            className="text-red-600 hover:text-red-900 text-sm"
-            title="Delete invoice"
-          >
-            🗑️ Delete
-          </button>
-        </div>
-      )
-    }
-  ];
 
   if (isLoading) {
     return <div className="text-center py-8">Loading invoices...</div>;
@@ -354,11 +256,17 @@ export function InvoicesPage() {
         />
 
         <button
-          onClick={handleMergeDuplicates}
-          className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 whitespace-nowrap"
-          disabled={invoices.length === 0}
+          onClick={expandAll}
+          className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 whitespace-nowrap"
         >
-          🔀 Merge Duplicates
+          📂 Expand All
+        </button>
+
+        <button
+          onClick={collapseAll}
+          className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 whitespace-nowrap"
+        >
+          📁 Collapse All
         </button>
       </div>
 
@@ -406,7 +314,7 @@ export function InvoicesPage() {
         })}
       </div>
 
-      {/* Invoices Table */}
+      {/* Invoices Grouped by Supplier */}
       {filteredInvoices.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg shadow-sm">
           <div className="text-4xl mb-4">📄</div>
@@ -427,11 +335,117 @@ export function InvoicesPage() {
           )}
         </div>
       ) : (
-        <Table
-          data={filteredInvoices}
-          columns={columns}
-          sortable
-        />
+        <div className="space-y-4">
+          {groupedBySupplier().map(group => {
+            const isExpanded = expandedSuppliers.has(group.supplierId);
+            
+            return (
+              <div key={group.supplierId} className="bg-white rounded-lg shadow-sm border overflow-hidden">
+                {/* Supplier Folder Header */}
+                <button
+                  onClick={() => toggleSupplier(group.supplierId)}
+                  className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center space-x-4">
+                    <span className="text-2xl">{isExpanded ? '📂' : '📁'}</span>
+                    <div className="text-left">
+                      <h3 className="text-lg font-semibold text-gray-900">{group.supplierName}</h3>
+                      <p className="text-sm text-gray-500">
+                        {group.count} invoice{group.count !== 1 ? 's' : ''} · Total: {formatPrice(group.totalAmount, 'EUR')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-gray-400">{isExpanded ? '▼' : '▶'}</span>
+                  </div>
+                </button>
+
+                {/* Invoices List */}
+                {isExpanded && (
+                  <div className="border-t bg-gray-50">
+                    {group.invoices.map(invoice => (
+                      <div
+                        key={invoice.id}
+                        className="px-6 py-4 border-b last:border-b-0 hover:bg-white transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4 flex-1">
+                            <input
+                              type="checkbox"
+                              checked={selectedInvoices.has(invoice.id)}
+                              onChange={() => handleSelectInvoice(invoice.id)}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            
+                            <div className="flex-1 grid grid-cols-6 gap-4">
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">{invoice.invoiceNumber}</div>
+                                <div className="text-xs text-gray-500">
+                                  {invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString() : '-'}
+                                </div>
+                              </div>
+                              
+                              <div>
+                                <div className="text-sm text-gray-700">{formatPrice(invoice.totalInclVat || 0, invoice.currency || 'EUR')}</div>
+                                <div className="text-xs text-gray-500">incl. VAT</div>
+                              </div>
+                              
+                              <div>
+                                <div className="text-sm text-gray-700">{formatPrice(invoice.totalExclVat || 0, invoice.currency || 'EUR')}</div>
+                                <div className="text-xs text-gray-500">excl. VAT</div>
+                              </div>
+                              
+                              <div>
+                                <div className="text-sm text-gray-700">
+                                  {(invoice.discountAmount || 0) > 0 ? formatPrice(invoice.discountAmount || 0, invoice.currency || 'EUR') : '-'}
+                                </div>
+                                <div className="text-xs text-gray-500">discount</div>
+                              </div>
+                              
+                              <div>
+                                <Select
+                                  value={invoice.status}
+                                  onChange={(value) => handleStatusChange(invoice.id, value as InvoiceStatus)}
+                                  options={[
+                                    { value: 'pending', label: 'Pending' },
+                                    { value: 'processing', label: 'Processing' },
+                                    { value: 'review', label: 'Review' },
+                                    { value: 'approved', label: 'Approved' },
+                                    { value: 'rejected', label: 'Rejected' }
+                                  ]}
+                                  className="w-32"
+                                />
+                              </div>
+                              
+                              <div className="flex space-x-2 justify-end">
+                                {invoice.filePath && (
+                                  <button
+                                    onClick={() => handleViewFile(invoice)}
+                                    className="text-blue-600 hover:text-blue-900 text-sm px-2 py-1"
+                                    title="View/Download file"
+                                  >
+                                    📎 File
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => setDeleteConfirm({ show: true, invoice })}
+                                  className="text-red-600 hover:text-red-900 text-sm px-2 py-1"
+                                  title="Delete invoice"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {/* Delete Confirmation Dialog */}
