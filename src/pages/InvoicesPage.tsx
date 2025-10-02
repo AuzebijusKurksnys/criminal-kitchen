@@ -529,7 +529,7 @@ export function InvoicesPage() {
                                         <div>
                                           <div className="text-sm font-medium text-gray-900">{invoice.invoiceNumber}</div>
                                           <div className="text-xs text-gray-500">
-                                            {invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString() : '-'}
+                                            {invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '-'}
                                           </div>
                                         </div>
                                         
