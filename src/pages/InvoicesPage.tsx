@@ -27,6 +27,7 @@ export function InvoicesPage() {
   });
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [expandedSuppliers, setExpandedSuppliers] = useState<Set<string>>(new Set());
+  const [expandedYears, setExpandedYears] = useState<Set<string>>(new Set());
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
 
@@ -72,7 +73,7 @@ export function InvoicesPage() {
     setFilteredInvoices(filtered);
   };
 
-  // Group invoices by supplier and then by month
+  // Group invoices by supplier, then by year, then by month
   const groupedBySupplier = () => {
     const groups = new Map<string, (Invoice & { supplierName?: string })[]>();
     
@@ -88,42 +89,67 @@ export function InvoicesPage() {
     // Convert to array and sort by supplier name
     return Array.from(groups.entries())
       .map(([supplierId, invoices]) => {
-        // Group invoices by month
-        const monthGroups = new Map<string, (Invoice & { supplierName?: string })[]>();
+        // Group invoices by year
+        const yearGroups = new Map<number, (Invoice & { supplierName?: string })[]>();
         
         invoices.forEach(invoice => {
           const date = new Date(invoice.invoiceDate || invoice.createdAt);
-          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          const year = date.getFullYear();
           
-          if (!monthGroups.has(monthKey)) {
-            monthGroups.set(monthKey, []);
+          if (!yearGroups.has(year)) {
+            yearGroups.set(year, []);
           }
-          monthGroups.get(monthKey)!.push(invoice);
+          yearGroups.get(year)!.push(invoice);
         });
 
-        // Convert month groups to array and sort by date (newest first)
-        const months = Array.from(monthGroups.entries())
-          .map(([monthKey, monthInvoices]) => {
-            const [year, month] = monthKey.split('-');
-            const date = new Date(parseInt(year), parseInt(month) - 1);
+        // Convert year groups to array and sort by year (newest first)
+        const years = Array.from(yearGroups.entries())
+          .map(([year, yearInvoices]) => {
+            // Group invoices by month within the year
+            const monthGroups = new Map<number, (Invoice & { supplierName?: string })[]>();
             
+            yearInvoices.forEach(invoice => {
+              const date = new Date(invoice.invoiceDate || invoice.createdAt);
+              const month = date.getMonth();
+              
+              if (!monthGroups.has(month)) {
+                monthGroups.set(month, []);
+              }
+              monthGroups.get(month)!.push(invoice);
+            });
+
+            // Convert month groups to array and sort by month (newest first)
+            const months = Array.from(monthGroups.entries())
+              .map(([month, monthInvoices]) => {
+                const date = new Date(year, month);
+                
+                return {
+                  monthKey: `${year}-${String(month + 1).padStart(2, '0')}`,
+                  monthLabel: date.toLocaleDateString('en-US', { month: 'long' }),
+                  invoices: monthInvoices.sort((a, b) => 
+                    new Date(b.invoiceDate || b.createdAt).getTime() - 
+                    new Date(a.invoiceDate || a.createdAt).getTime()
+                  ),
+                  totalAmount: monthInvoices.reduce((sum, inv) => sum + (inv.totalInclVat || 0), 0),
+                  count: monthInvoices.length
+                };
+              })
+              .sort((a, b) => b.monthKey.localeCompare(a.monthKey)); // Newest month first
+
             return {
-              monthKey,
-              monthLabel: date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
-              invoices: monthInvoices.sort((a, b) => 
-                new Date(b.invoiceDate || b.createdAt).getTime() - 
-                new Date(a.invoiceDate || a.createdAt).getTime()
-              ),
-              totalAmount: monthInvoices.reduce((sum, inv) => sum + (inv.totalInclVat || 0), 0),
-              count: monthInvoices.length
+              year,
+              yearLabel: year.toString(),
+              months,
+              totalAmount: yearInvoices.reduce((sum, inv) => sum + (inv.totalInclVat || 0), 0),
+              count: yearInvoices.length
             };
           })
-          .sort((a, b) => b.monthKey.localeCompare(a.monthKey)); // Newest month first
+          .sort((a, b) => b.year - a.year); // Newest year first
 
         return {
           supplierId,
           supplierName: invoices[0]?.supplierName || 'Unknown Supplier',
-          months,
+          years,
           totalAmount: invoices.reduce((sum, inv) => sum + (inv.totalInclVat || 0), 0),
           count: invoices.length
         };
@@ -141,6 +167,16 @@ export function InvoicesPage() {
     setExpandedSuppliers(newExpanded);
   };
 
+  const toggleYear = (yearKey: string) => {
+    const newExpanded = new Set(expandedYears);
+    if (newExpanded.has(yearKey)) {
+      newExpanded.delete(yearKey);
+    } else {
+      newExpanded.add(yearKey);
+    }
+    setExpandedYears(newExpanded);
+  };
+
   const toggleMonth = (monthKey: string) => {
     const newExpanded = new Set(expandedMonths);
     if (newExpanded.has(monthKey)) {
@@ -154,18 +190,28 @@ export function InvoicesPage() {
   const expandAll = () => {
     const grouped = groupedBySupplier();
     const allSupplierIds = grouped.map(g => g.supplierId);
+    const allYearKeys: string[] = [];
     const allMonthKeys: string[] = [];
+    
     grouped.forEach(supplier => {
-      supplier.months.forEach(month => {
-        allMonthKeys.push(`${supplier.supplierId}_${month.monthKey}`);
+      supplier.years.forEach(year => {
+        const yearKey = `${supplier.supplierId}_${year.year}`;
+        allYearKeys.push(yearKey);
+        
+        year.months.forEach(month => {
+          allMonthKeys.push(`${yearKey}_${month.monthKey}`);
+        });
       });
     });
+    
     setExpandedSuppliers(new Set(allSupplierIds));
+    setExpandedYears(new Set(allYearKeys));
     setExpandedMonths(new Set(allMonthKeys));
   };
 
   const collapseAll = () => {
     setExpandedSuppliers(new Set());
+    setExpandedYears(new Set());
     setExpandedMonths(new Set());
   };
 
@@ -410,36 +456,62 @@ export function InvoicesPage() {
                   </div>
                 </button>
 
-                {/* Month Folders */}
+                {/* Year Folders */}
                 {isSupplierExpanded && (
                   <div className="border-t bg-gray-50">
-                    {group.months.map(month => {
-                      const monthKey = `${group.supplierId}_${month.monthKey}`;
-                      const isMonthExpanded = expandedMonths.has(monthKey);
+                    {group.years.map(year => {
+                      const yearKey = `${group.supplierId}_${year.year}`;
+                      const isYearExpanded = expandedYears.has(yearKey);
                       
                       return (
-                        <div key={monthKey} className="border-b last:border-b-0">
-                          {/* Month Subfolder Header */}
+                        <div key={yearKey} className="border-b last:border-b-0">
+                          {/* Year Subfolder Header */}
                           <button
-                            onClick={() => toggleMonth(monthKey)}
+                            onClick={() => toggleYear(yearKey)}
                             className="w-full px-8 py-3 flex items-center justify-between hover:bg-gray-100 transition-colors"
                           >
                             <div className="flex items-center space-x-3">
-                              <span className="text-lg">{isMonthExpanded ? '📂' : '📁'}</span>
+                              <span className="text-xl">{isYearExpanded ? '📂' : '📁'}</span>
                               <div className="text-left">
-                                <h4 className="text-md font-medium text-gray-800">{month.monthLabel}</h4>
+                                <h4 className="text-md font-semibold text-gray-800">{year.yearLabel}</h4>
                                 <p className="text-xs text-gray-500">
-                                  {month.count} invoice{month.count !== 1 ? 's' : ''} · {formatPrice(month.totalAmount, 'EUR')}
+                                  {year.count} invoice{year.count !== 1 ? 's' : ''} · {formatPrice(year.totalAmount, 'EUR')}
                                 </p>
                               </div>
                             </div>
-                            <span className="text-gray-400 text-sm">{isMonthExpanded ? '▼' : '▶'}</span>
+                            <span className="text-gray-400 text-sm">{isYearExpanded ? '▼' : '▶'}</span>
                           </button>
 
-                          {/* Invoices in Month */}
-                          {isMonthExpanded && (
-                            <div className="bg-white">
-                              {month.invoices.map(invoice => (
+                          {/* Month Folders within Year */}
+                          {isYearExpanded && (
+                            <div className="bg-gray-100">
+                              {year.months.map(month => {
+                                const monthKey = `${yearKey}_${month.monthKey}`;
+                                const isMonthExpanded = expandedMonths.has(monthKey);
+                                
+                                return (
+                                  <div key={monthKey} className="border-b last:border-b-0">
+                                    {/* Month Subfolder Header */}
+                                    <button
+                                      onClick={() => toggleMonth(monthKey)}
+                                      className="w-full px-12 py-2.5 flex items-center justify-between hover:bg-gray-200 transition-colors"
+                                    >
+                                      <div className="flex items-center space-x-3">
+                                        <span className="text-base">{isMonthExpanded ? '📂' : '📁'}</span>
+                                        <div className="text-left">
+                                          <h5 className="text-sm font-medium text-gray-700">{month.monthLabel}</h5>
+                                          <p className="text-xs text-gray-500">
+                                            {month.count} invoice{month.count !== 1 ? 's' : ''} · {formatPrice(month.totalAmount, 'EUR')}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <span className="text-gray-400 text-xs">{isMonthExpanded ? '▼' : '▶'}</span>
+                                    </button>
+
+                                    {/* Invoices in Month */}
+                                    {isMonthExpanded && (
+                                      <div className="bg-white">
+                                        {month.invoices.map(invoice => (
                                 <div
                                   key={invoice.id}
                                   className="px-10 py-4 border-b last:border-b-0 hover:bg-gray-50 transition-colors"
@@ -514,20 +586,25 @@ export function InvoicesPage() {
                                       </div>
                                     </div>
                                   </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    )}
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
