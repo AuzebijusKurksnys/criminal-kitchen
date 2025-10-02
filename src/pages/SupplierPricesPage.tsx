@@ -83,6 +83,51 @@ export function SupplierPricesPage() {
     }
   };
 
+  const handleMergeDuplicates = async () => {
+    if (!selectedProductId) return;
+    
+    setSubmitting(true);
+    try {
+      // Group prices by supplier
+      const pricesBySupplier = new Map<string, SupplierPrice[]>();
+      supplierPrices.forEach(price => {
+        const key = price.supplierId;
+        if (!pricesBySupplier.has(key)) {
+          pricesBySupplier.set(key, []);
+        }
+        pricesBySupplier.get(key)!.push(price);
+      });
+
+      let deletedCount = 0;
+      
+      // For each supplier, keep only the most recent price
+      for (const [supplierId, prices] of pricesBySupplier) {
+        if (prices.length > 1) {
+          // Sort by lastUpdated descending (most recent first)
+          prices.sort((a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime());
+          
+          // Delete all except the first (most recent)
+          for (let i = 1; i < prices.length; i++) {
+            await deleteSupplierPrice(prices[i].id);
+            deletedCount++;
+          }
+        }
+      }
+
+      if (deletedCount > 0) {
+        showSuccess(`Merged ${deletedCount} duplicate price(s)`);
+        await loadSupplierPrices(selectedProductId);
+      } else {
+        showSuccess('No duplicates found');
+      }
+    } catch (error) {
+      showError('Failed to merge duplicates');
+      console.error('Error merging duplicates:', error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // Supplier operations
   const handleCreateSupplier = async (formData: SupplierFormData) => {
     setSubmitting(true);
@@ -251,6 +296,13 @@ export function SupplierPricesPage() {
               className="btn-secondary btn-md"
             >
               Manage Suppliers
+            </button>
+            <button
+              onClick={handleMergeDuplicates}
+              className="btn-secondary btn-md"
+              disabled={!selectedProductId || supplierPrices.length === 0 || submitting}
+            >
+              {submitting ? 'Merging...' : 'Merge Duplicates'}
             </button>
             <button
               onClick={() => setViewMode('create-price')}
