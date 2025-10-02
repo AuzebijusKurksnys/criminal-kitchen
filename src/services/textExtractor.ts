@@ -411,6 +411,18 @@ export class TextExtractor {
       .replace(/\s{2,}/g, ' ')
       .trim();
 
+    // Skip products with nonsensical/incomplete names
+    if (productName.length < 15) {
+      console.warn('⚠️ Product name too short, likely incomplete:', productName);
+      return undefined;
+    }
+    
+    // Skip if product starts with common incomplete phrases
+    if (/^(su perpjautu|su |ir |be |per |prie )/i.test(productName)) {
+      console.warn('⚠️ Product name starts with incomplete phrase:', productName);
+      return undefined;
+    }
+
     const parsedProduct: ParsedProduct = {
       productName,
       description: productName,
