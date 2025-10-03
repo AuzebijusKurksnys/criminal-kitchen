@@ -534,7 +534,7 @@ export function InvoiceReviewPage() {
                 {extractedData.supplierInfo && !selectedSupplierId && (
                   <button
                     onClick={handleCreateNewSupplier}
-                    className="px-3 py-2 border border-green-300 text-green-700 rounded-md text-sm hover:bg-green-50"
+                    className="px-3 py-2 border border-green-500 text-green-400 rounded-md text-sm hover:bg-green-900/20 bg-green-900/10"
                   >
                     Create "{extractedData.supplierInfo.name}"
                   </button>
