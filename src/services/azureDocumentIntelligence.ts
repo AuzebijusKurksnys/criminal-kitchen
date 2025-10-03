@@ -276,11 +276,18 @@ export class AzureDocumentIntelligenceService {
         return 0;
       };
       
+      const productName = props.Description?.content || props.Description?.value || `Product ${index + 1}`;
+      const extractedUnit = props.Unit?.content || props.Unit?.value;
+      const normalizedUnit = this.normalizeUnit(extractedUnit);
+      
+      // Smart unit detection based on product name if unit seems wrong
+      const smartUnit = this.getSmartUnit(productName, normalizedUnit, parseEuropeanNumber(props.Quantity?.content || props.Quantity?.value || '1'));
+      
       return {
-        productName: props.Description?.content || props.Description?.value || `Product ${index + 1}`,
+        productName,
         description: '',
         quantity: parseEuropeanNumber(props.Quantity?.content || props.Quantity?.value || '1') || 1,
-        unit: this.normalizeUnit(props.Unit?.content || props.Unit?.value) || 'pcs',
+        unit: smartUnit,
         unitPrice: parseEuropeanNumber(props.UnitPrice?.content || props.UnitPrice?.value || '0') || 0,
         totalPrice: parseEuropeanNumber(props.Amount?.content || props.Amount?.value || '0') || 0,
         vatRate: 21, // Default VAT rate
@@ -305,27 +312,104 @@ export class AzureDocumentIntelligenceService {
   private normalizeUnit(unit: string | undefined): string {
     if (!unit) return 'pcs';
     
-    const unitLower = unit.toLowerCase().trim();
+    // Remove periods and normalize
+    const cleaned = unit.toLowerCase().trim().replace(/\./g, '');
     const unitMap: { [key: string]: string } = {
+      // Weight units
       'kg': 'kg',
       'kilogram': 'kg',
       'g': 'g',
       'gram': 'g',
+      'grams': 'g',
+      
+      // Volume units
       'l': 'l',
       'liter': 'l',
       'litre': 'l',
+      'liters': 'l',
+      'litres': 'l',
       'ml': 'ml',
       'milliliter': 'ml',
+      'milliliters': 'ml',
+      
+      // Piece/unit units (Lithuanian: vnt = vienetai = pieces)
       'pcs': 'pcs',
       'pc': 'pcs',
       'piece': 'pcs',
       'pieces': 'pcs',
-      'vnt': 'pcs',
+      'vnt': 'pcs',           // Lithuanian: vienetai
+      'vienetai': 'pcs',      // Lithuanian: pieces
       'unit': 'pcs',
-      'units': 'pcs'
+      'units': 'pcs',
+      'item': 'pcs',
+      'items': 'pcs'
     };
 
-    return unitMap[unitLower] || 'pcs';
+    return unitMap[cleaned] || 'pcs';
+  }
+
+  private getSmartUnit(productName: string, extractedUnit: string, quantity: number): string {
+    const name = productName.toLowerCase();
+    
+    // If we have a clear unit from invoice, use it
+    if (extractedUnit && extractedUnit !== 'pcs') {
+      return extractedUnit;
+    }
+    
+    // Smart detection based on product name patterns
+    const vegetableKeywords = [
+      'agurkai', 'pomidorai', 'kopūstai', 'morkos', 'bulvės', 'svogūnai',
+      'česnakai', 'pipirai', 'salotos', 'žalumynai', 'daržovės',
+      'cucumber', 'tomato', 'cabbage', 'carrot', 'potato', 'onion', 'garlic'
+    ];
+    
+    const liquidKeywords = [
+      'sultys', 'gėrimas', 'pienas', 'aliejus', 'sirupas', 'padažas',
+      'juice', 'drink', 'milk', 'oil', 'syrup', 'sauce'
+    ];
+    
+    const meatKeywords = [
+      'mėsa', 'kumpis', 'šoninė', 'dešra', 'kumpis', 'kiaušiniai',
+      'meat', 'ham', 'bacon', 'sausage', 'eggs'
+    ];
+    
+    // Check for vegetables - likely kg
+    if (vegetableKeywords.some(keyword => name.includes(keyword))) {
+      // If quantity is very small (like 0.08), it's probably kg
+      if (quantity < 1 && quantity > 0.01) {
+        return 'kg';
+      }
+      // If quantity is large whole numbers, it might be pieces
+      if (quantity >= 1 && quantity === Math.floor(quantity)) {
+        return 'pcs';
+      }
+      // Default to kg for vegetables
+      return 'kg';
+    }
+    
+    // Check for liquids - likely l or ml
+    if (liquidKeywords.some(keyword => name.includes(keyword))) {
+      if (quantity < 1) {
+        return 'l';
+      } else if (quantity < 10) {
+        return 'l';
+      } else {
+        return 'ml';
+      }
+    }
+    
+    // Check for meat - likely kg
+    if (meatKeywords.some(keyword => name.includes(keyword))) {
+      return quantity < 1 ? 'kg' : 'pcs';
+    }
+    
+    // Default behavior - if quantity is very small, probably kg
+    if (quantity < 1 && quantity > 0.01) {
+      return 'kg';
+    }
+    
+    // Default to pieces
+    return extractedUnit || 'pcs';
   }
 }
 
