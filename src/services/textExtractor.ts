@@ -308,7 +308,14 @@ export class TextExtractor {
         continue;
       }
 
-      if (/^Viso\s+be\s+PVM/i.test(line)) {
+      // Stop at various summary/total indicators
+      if (/^Viso\s+be\s+PVM/i.test(line) || 
+          /^Apmokestinama\s+\d+%/i.test(line) ||
+          /^PVM\s+\d+%/i.test(line) ||
+          /^Suma\s+su\s+PVM/i.test(line) ||
+          /^Mokėtina\s+suma/i.test(line) ||
+          /^Apvalinimas/i.test(line) ||
+          /^Kasos\s+aparato/i.test(line)) {
         if (currentRow.length) {
           rows.push(currentRow.join(' '));
         }
@@ -333,7 +340,17 @@ export class TextExtractor {
   }
 
   private static parseProductRow(row: string): ParsedProduct | undefined {
-    const sanitized = row.replace(/Viso.*$/i, '').trim();
+    // Remove everything after summary indicators
+    let sanitized = row
+      .replace(/Apmokestinama.*$/i, '')
+      .replace(/PVM\s+\d+%:.*$/i, '')
+      .replace(/Suma\s+su\s+PVM.*$/i, '')
+      .replace(/Mokėtina\s+suma.*$/i, '')
+      .replace(/Apvalinimas.*$/i, '')
+      .replace(/Kasos\s+aparato.*$/i, '')
+      .replace(/Viso.*$/i, '')
+      .trim();
+      
     if (!sanitized) {
       return undefined;
     }
