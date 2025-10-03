@@ -14,6 +14,7 @@ import { ReportsPage } from './pages/ReportsPage';
 import { AdminMergeDippers } from './pages/AdminMergeDippers';
 import { AdminFixSuppliers } from './pages/AdminFixSuppliers';
 import { AdminCleanup } from './pages/AdminCleanup';
+import { AdminFixLidlName } from './pages/AdminFixLidlName';
 
 export function AppRoutes() {
   return (
@@ -34,6 +35,7 @@ export function AppRoutes() {
       <Route path="/admin/merge-dippers" element={<AdminMergeDippers />} />
       <Route path="/admin/fix-suppliers" element={<AdminFixSuppliers />} />
       <Route path="/admin/cleanup" element={<AdminCleanup />} />
+      <Route path="/admin/fix-lidl-name" element={<AdminFixLidlName />} />
     </Routes>
   );
 }
