@@ -267,6 +267,12 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
   }
 
   // Try Azure Document Intelligence first (specialized for invoices)
+  console.log('🔍 Checking Azure availability:', {
+    endpoint: import.meta.env.VITE_AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT ? 'SET' : 'NOT SET',
+    key: import.meta.env.VITE_AZURE_DOCUMENT_INTELLIGENCE_KEY ? 'SET' : 'NOT SET',
+    available: isAzureDocumentIntelligenceAvailable()
+  });
+  
   if (isAzureDocumentIntelligenceAvailable()) {
     console.log('🔵 Using Azure Document Intelligence for OCR');
     try {
