@@ -214,13 +214,25 @@ export class AzureDocumentIntelligenceService {
         amount: props.Amount?.content || props.Amount?.value
       });
       
+      // Helper to parse European number format (comma as decimal separator)
+      const parseEuropeanNumber = (value: any): number => {
+        if (typeof value === 'number') return value;
+        if (typeof value === 'string') {
+          // Replace comma with dot for European format, remove spaces
+          const cleaned = value.replace(/\s/g, '').replace(',', '.');
+          const num = parseFloat(cleaned);
+          return isNaN(num) ? 0 : num;
+        }
+        return 0;
+      };
+      
       return {
         productName: props.Description?.content || props.Description?.value || `Product ${index + 1}`,
         description: '',
-        quantity: parseFloat(props.Quantity?.content || props.Quantity?.value || '1') || 1,
+        quantity: parseEuropeanNumber(props.Quantity?.content || props.Quantity?.value || '1') || 1,
         unit: this.normalizeUnit(props.Unit?.content || props.Unit?.value) || 'pcs',
-        unitPrice: parseFloat(props.UnitPrice?.content || props.UnitPrice?.value || '0') || 0,
-        totalPrice: parseFloat(props.Amount?.content || props.Amount?.value || '0') || 0,
+        unitPrice: parseEuropeanNumber(props.UnitPrice?.content || props.UnitPrice?.value || '0') || 0,
+        totalPrice: parseEuropeanNumber(props.Amount?.content || props.Amount?.value || '0') || 0,
         vatRate: 21, // Default VAT rate
         needsReview: true,
         createdAt: new Date().toISOString(),
