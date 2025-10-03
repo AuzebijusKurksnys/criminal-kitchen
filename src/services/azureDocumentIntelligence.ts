@@ -186,17 +186,41 @@ export class AzureDocumentIntelligenceService {
   }
 
   private extractLineItems(items: any): any[] {
-    if (!items?.values) return [];
+    // Azure can return items in either 'values' or 'valueArray' depending on the model
+    const itemArray = items?.valueArray || items?.values || [];
+    
+    console.log('🔍 Extracting line items:', {
+      hasValueArray: !!items?.valueArray,
+      hasValues: !!items?.values,
+      itemCount: itemArray.length,
+      firstItem: itemArray[0]
+    });
+    
+    if (!itemArray.length) {
+      console.warn('⚠️ No items found in Azure response');
+      return [];
+    }
 
-    return items.values.map((item: any, index: number) => {
-      const props = item.properties || {};
+    return itemArray.map((item: any, index: number) => {
+      // Azure prebuilt-invoice model uses 'valueObject' with 'content' sub-fields
+      const itemObj = item.valueObject || item.properties || item;
+      const props = itemObj.content || itemObj;
+      
+      console.log(`📦 Item ${index + 1}:`, {
+        raw: item,
+        props: props,
+        description: props.Description?.content || props.Description?.value,
+        quantity: props.Quantity?.content || props.Quantity?.value,
+        amount: props.Amount?.content || props.Amount?.value
+      });
+      
       return {
-        productName: props.Description?.value || `Product ${index + 1}`,
+        productName: props.Description?.content || props.Description?.value || `Product ${index + 1}`,
         description: '',
-        quantity: props.Quantity?.value || 1,
-        unit: this.normalizeUnit(props.Unit?.value) || 'pcs',
-        unitPrice: props.UnitPrice?.value || 0,
-        totalPrice: props.Amount?.value || 0,
+        quantity: parseFloat(props.Quantity?.content || props.Quantity?.value || '1') || 1,
+        unit: this.normalizeUnit(props.Unit?.content || props.Unit?.value) || 'pcs',
+        unitPrice: parseFloat(props.UnitPrice?.content || props.UnitPrice?.value || '0') || 0,
+        totalPrice: parseFloat(props.Amount?.content || props.Amount?.value || '0') || 0,
         vatRate: 21, // Default VAT rate
         needsReview: true,
         createdAt: new Date().toISOString(),
