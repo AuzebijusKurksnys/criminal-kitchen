@@ -90,7 +90,15 @@ export function InvoiceBatchReviewPage() {
     // More aggressive normalization for better grouping
     return cleaned
       .toLowerCase()
-      // Normalize common abbreviations
+      // Normalize Lithuanian abbreviations and variations
+      .replace(/\bšakelėm(is)?\b/g, 'sak')
+      .replace(/\bšak\b\.?/g, 'sak')
+      .replace(/\bbandel(ėmis|es|ės)?\b/g, 'bandel')
+      .replace(/\bsūr(is|ių)?\b/g, 'sur')
+      .replace(/\bsalotos\b/g, 'salotos')
+      .replace(/\biceberg\b/g, 'iceberg')
+      .replace(/\bmėsainių\b/g, 'mesainiu')
+      .replace(/\bmes\.bandel(ės|es)?\b/g, 'mesbandel')
       .replace(/\bvišč(iukų)?\b/g, 'visciuku') // višč/viščiukų -> visciuku
       .replace(/\bkrūtinėlių\s*filė\b/g, 'file') // krūtinėlių filė -> file
       .replace(/\bbroilerių\b/g, 'broileriu')
