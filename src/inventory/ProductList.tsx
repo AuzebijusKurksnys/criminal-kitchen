@@ -1,17 +1,25 @@
-import { useState, useMemo } from 'react';
-import type { Product } from '../data/types';
+import { useState, useMemo, useEffect } from 'react';
+import type { Product, SupplierPrice, Supplier } from '../data/types';
 import { Table, type TableColumn } from '../components/Table';
 import { SearchInput } from '../components/SearchInput';
 import { Select } from '../components/Select';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { formatQuantity } from '../utils/format';
 import { UNITS } from '../data/constants';
+import { listSuppliers, listSupplierPrices } from '../data/store';
 
 interface ProductListProps {
   products: Product[];
   onEdit: (product: Product) => void;
   onDelete: (id: string) => void;
   loading?: boolean;
+}
+
+type ViewMode = 'list' | 'supplier-groups';
+
+interface ProductWithSupplier extends Product {
+  supplierName?: string;
+  supplierId?: string;
 }
 
 export function ProductList({ products, onEdit, onDelete, loading = false }: ProductListProps) {
@@ -21,6 +29,25 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
   const [stockLevelFilter, setStockLevelFilter] = useState('');
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [supplierPrices, setSupplierPrices] = useState<SupplierPrice[]>([]);
+  const [expandedSuppliers, setExpandedSuppliers] = useState<Set<string>>(new Set());
+
+  // Load suppliers and prices for grouping
+  useEffect(() => {
+    const loadSuppliersAndPrices = async () => {
+      const [suppliersData, pricesData] = await Promise.all([
+        listSuppliers(),
+        listSupplierPrices()
+      ]);
+      setSuppliers(suppliersData);
+      setSupplierPrices(pricesData);
+      // Expand all suppliers by default (including unassigned)
+      setExpandedSuppliers(new Set([...suppliersData.map(s => s.id), 'unassigned']));
+    };
+    loadSuppliersAndPrices();
+  }, []);
 
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
@@ -53,6 +80,57 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
       return matchesSearch && matchesUnit && matchesCategory && matchesStockLevel;
     });
   }, [products, searchQuery, unitFilter, categoryFilter, stockLevelFilter]);
+
+  // Group products by supplier
+  const productsBySupplier = useMemo(() => {
+    const grouped: Record<string, ProductWithSupplier[]> = {};
+    const unassigned: ProductWithSupplier[] = [];
+
+    filteredProducts.forEach(product => {
+      // Find preferred supplier for this product
+      const preferredPrice = supplierPrices.find(
+        sp => sp.productId === product.id && sp.preferred
+      );
+      
+      if (preferredPrice) {
+        const supplier = suppliers.find(s => s.id === preferredPrice.supplierId);
+        if (supplier) {
+          if (!grouped[supplier.id]) {
+            grouped[supplier.id] = [];
+          }
+          grouped[supplier.id].push({
+            ...product,
+            supplierName: supplier.name,
+            supplierId: supplier.id
+          });
+        } else {
+          unassigned.push(product);
+        }
+      } else {
+        unassigned.push(product);
+      }
+    });
+
+    return { grouped, unassigned };
+  }, [filteredProducts, supplierPrices, suppliers]);
+
+  const toggleSupplier = (supplierId: string) => {
+    const newExpanded = new Set(expandedSuppliers);
+    if (newExpanded.has(supplierId)) {
+      newExpanded.delete(supplierId);
+    } else {
+      newExpanded.add(supplierId);
+    }
+    setExpandedSuppliers(newExpanded);
+  };
+
+  const toggleAllSuppliers = () => {
+    if (expandedSuppliers.size > 0) {
+      setExpandedSuppliers(new Set());
+    } else {
+      setExpandedSuppliers(new Set(suppliers.map(s => s.id)));
+    }
+  };
 
   const handleDeleteClick = (product: Product) => {
     setDeleteProduct(product);
@@ -341,43 +419,163 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
           </div>
         </div>
 
-        {/* Results summary and bulk actions */}
+        {/* View mode toggle */}
         <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            {(searchQuery || unitFilter || categoryFilter || stockLevelFilter) ? (
-              <>Showing {filteredProducts.length} of {products.length} products</>
-            ) : (
-              <>{products.length} products total</>
-            )}
-            {selectedProducts.size > 0 && (
-              <span className="ml-2 text-blue-400 font-medium">
-                ({selectedProducts.size} selected)
-              </span>
-            )}
+          <div className="flex items-center space-x-4">
+            <div className="text-sm text-gray-400">
+              {(searchQuery || unitFilter || categoryFilter || stockLevelFilter) ? (
+                <>Showing {filteredProducts.length} of {products.length} products</>
+              ) : (
+                <>{products.length} products total</>
+              )}
+              {selectedProducts.size > 0 && (
+                <span className="ml-2 text-blue-400 font-medium">
+                  ({selectedProducts.size} selected)
+                </span>
+              )}
+            </div>
           </div>
           
-          {selectedProducts.size > 0 && (
-            <button
-              onClick={handleDeleteSelected}
-              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-            >
-              🗑️ Delete Selected ({selectedProducts.size})
-            </button>
-          )}
+          <div className="flex items-center space-x-2">
+            {selectedProducts.size > 0 && (
+              <button
+                onClick={handleDeleteSelected}
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+              >
+                🗑️ Delete Selected ({selectedProducts.size})
+              </button>
+            )}
+            
+            <div className="inline-flex rounded-lg border border-gray-700 bg-gray-800 p-1">
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                📋 List View
+              </button>
+              <button
+                onClick={() => setViewMode('supplier-groups')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  viewMode === 'supplier-groups'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                📁 Group by Supplier
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Table */}
-        <Table
-          data={filteredProducts}
-          columns={columns}
-          keyExtractor={(product) => product.id}
-          loading={loading}
-          emptyMessage={
-            searchQuery || unitFilter 
-              ? 'No products match your search criteria'
-              : 'No products found. Create your first product to get started.'
-          }
-        />
+        {/* List View */}
+        {viewMode === 'list' && (
+          <Table
+            data={filteredProducts}
+            columns={columns}
+            keyExtractor={(product) => product.id}
+            loading={loading}
+            emptyMessage={
+              searchQuery || unitFilter 
+                ? 'No products match your search criteria'
+                : 'No products found. Create your first product to get started.'
+            }
+          />
+        )}
+
+        {/* Supplier Groups View */}
+        {viewMode === 'supplier-groups' && (
+          <div className="space-y-4">
+            <div className="flex justify-end">
+              <button
+                onClick={toggleAllSuppliers}
+                className="text-sm text-blue-400 hover:text-blue-300"
+              >
+                {expandedSuppliers.size > 0 ? '📂 Collapse All' : '📁 Expand All'}
+              </button>
+            </div>
+
+            {suppliers.map(supplier => {
+              const supplierProducts = productsBySupplier.grouped[supplier.id] || [];
+              if (supplierProducts.length === 0) return null;
+              
+              const isExpanded = expandedSuppliers.has(supplier.id);
+              
+              return (
+                <div key={supplier.id} className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => toggleSupplier(supplier.id)}
+                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-800 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <span className="text-xl">{isExpanded ? '📂' : '📁'}</span>
+                      <div className="text-left">
+                        <h3 className="text-lg font-medium text-gray-100">{supplier.name}</h3>
+                        <p className="text-sm text-gray-400">{supplierProducts.length} products</p>
+                      </div>
+                    </div>
+                    <span className="text-gray-400">{isExpanded ? '▼' : '▶'}</span>
+                  </button>
+                  
+                  {isExpanded && (
+                    <div className="border-t border-gray-800">
+                      <Table
+                        data={supplierProducts}
+                        columns={columns}
+                        keyExtractor={(product) => product.id}
+                        emptyMessage="No products for this supplier"
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {productsBySupplier.unassigned.length > 0 && (
+              <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => toggleSupplier('unassigned')}
+                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-800 transition-colors"
+                >
+                  <div className="flex items-center space-x-3">
+                    <span className="text-xl">{expandedSuppliers.has('unassigned') ? '📂' : '📁'}</span>
+                    <div className="text-left">
+                      <h3 className="text-lg font-medium text-gray-400">No Preferred Supplier</h3>
+                      <p className="text-sm text-gray-500">{productsBySupplier.unassigned.length} products</p>
+                    </div>
+                  </div>
+                  <span className="text-gray-400">{expandedSuppliers.has('unassigned') ? '▼' : '▶'}</span>
+                </button>
+                
+                {expandedSuppliers.has('unassigned') && (
+                  <div className="border-t border-gray-800">
+                    <Table
+                      data={productsBySupplier.unassigned}
+                      columns={columns}
+                      keyExtractor={(product) => product.id}
+                      emptyMessage="No unassigned products"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {loading && (
+              <div className="text-center py-8 text-gray-400">
+                Loading suppliers...
+              </div>
+            )}
+
+            {!loading && suppliers.length === 0 && productsBySupplier.unassigned.length === 0 && (
+              <div className="text-center py-8 text-gray-400">
+                No products found. Create your first product to get started.
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Delete confirmation dialog */}
