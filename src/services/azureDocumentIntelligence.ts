@@ -143,6 +143,11 @@ export class AzureDocumentIntelligenceService {
     }
 
     const fields = document.fields;
+    
+    // Debug: Log what Azure actually returned
+    console.log('📊 Azure returned fields:', Object.keys(fields));
+    console.log('📦 Azure Items field:', fields.Items);
+    console.log('📋 Full Azure result:', JSON.stringify(azureResult, null, 2));
 
     // Transform to our format
     const result: InvoiceProcessingResult = {
