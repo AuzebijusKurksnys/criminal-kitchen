@@ -186,7 +186,20 @@ export class AzureDocumentIntelligenceService {
     };
 
     // Add supplier info if available
-    const vendorName = fields.VendorName?.value || fields.VendorName?.content;
+    // Azure's VendorName field might only have "LiDL" - look for full name in content
+    let vendorName = fields.VendorName?.value || fields.VendorName?.content;
+    
+    // If vendor name is too short (like "LiDL"), try to find full name in raw content
+    if (vendorName && vendorName.length < 10) {
+      const content = azureResult.analyzeResult?.content || '';
+      // Look for "UAB [Company Name]" pattern in Lithuanian invoices
+      const uabMatch = content.match(/UAB\s+[^\n]+/i);
+      if (uabMatch) {
+        vendorName = uabMatch[0].trim();
+        console.log('📝 Found full vendor name in content:', vendorName);
+      }
+    }
+    
     if (vendorName) {
       console.log('✅ Setting supplierInfo:', vendorName);
       result.supplierInfo = {
