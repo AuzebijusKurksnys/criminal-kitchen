@@ -13,6 +13,7 @@ import { JournalsPage } from './pages/JournalsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { AdminMergeDippers } from './pages/AdminMergeDippers';
 import { AdminFixSuppliers } from './pages/AdminFixSuppliers';
+import { AdminCleanup } from './pages/AdminCleanup';
 
 export function AppRoutes() {
   return (
@@ -32,6 +33,7 @@ export function AppRoutes() {
       <Route path="/reports" element={<ReportsPage />} />
       <Route path="/admin/merge-dippers" element={<AdminMergeDippers />} />
       <Route path="/admin/fix-suppliers" element={<AdminFixSuppliers />} />
+      <Route path="/admin/cleanup" element={<AdminCleanup />} />
     </Routes>
   );
 }
