@@ -186,17 +186,32 @@ export class AzureDocumentIntelligenceService {
     };
 
     // Add supplier info if available
-    // Azure's VendorName field might only have "LiDL" - look for full name in content
+    // Azure's VendorName field might only have abbreviated name - look for full name in content
     let vendorName = fields.VendorName?.value || fields.VendorName?.content;
     
-    // If vendor name is too short (like "LiDL"), try to find full name in raw content
+    // If vendor name is too short (like "LiDL"), try to find full company name in raw content
     if (vendorName && vendorName.length < 10) {
       const content = azureResult.analyzeResult?.content || '';
-      // Look for "UAB [Company Name]" pattern in Lithuanian invoices
-      const uabMatch = content.match(/UAB\s+[^\n]+/i);
-      if (uabMatch) {
-        vendorName = uabMatch[0].trim();
-        console.log('📝 Found full vendor name in content:', vendorName);
+      
+      // Try multiple patterns:
+      // 1. Lithuanian company types: UAB, MB, AB, IĮ, VšĮ, TŪB, KŪB, etc.
+      const lithuanianMatch = content.match(/(UAB|MB|AB|I[IĮ]|V[Ss][IĮ]|T[UŪ]B|K[UŪ]B)\s+[^\n]+/i);
+      
+      // 2. International patterns: Ltd, LLC, Inc, GmbH, S.A., etc.
+      const internationalMatch = content.match(/[A-Z][a-zA-Z\s&.'-]+\s+(Ltd|LLC|Inc|Corp|GmbH|S\.?A\.?|B\.?V\.?|AG|AS|Oy|AB|ApS|S\.?r\.?l\.?|Sp\.\s*z\s*o\.?o\.?)[^\n]*/i);
+      
+      // 3. Generic: Look for "Tiekėjas" (Supplier) label followed by company name
+      const supplierMatch = content.match(/Tiek[eė]jas[:\s]+([^\n]+)/i);
+      
+      if (lithuanianMatch) {
+        vendorName = lithuanianMatch[0].trim();
+        console.log('📝 Found Lithuanian company name:', vendorName);
+      } else if (internationalMatch) {
+        vendorName = internationalMatch[0].trim();
+        console.log('📝 Found international company name:', vendorName);
+      } else if (supplierMatch) {
+        vendorName = supplierMatch[1].trim();
+        console.log('📝 Found supplier name from label:', vendorName);
       }
     }
     
