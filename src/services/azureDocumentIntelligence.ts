@@ -46,10 +46,34 @@ export class AzureDocumentIntelligenceService {
     this.config = config;
   }
 
+  // Try multiple Azure models with intelligent fallback
   async analyzeInvoice(file: File): Promise<InvoiceProcessingResult> {
+    const models = [
+      'prebuilt-invoice',      // Specialized invoice model (best for standard invoices)
+      'prebuilt-document',     // General document model (fallback for unusual layouts)
+      'prebuilt-layout'        // Layout model (last resort - extracts all text/tables)
+    ];
+
+    let lastError: Error | null = null;
+
+    for (const model of models) {
+      try {
+        console.log(`🔵 Trying Azure model: ${model}`);
+        return await this.analyzeWithModel(file, model);
+      } catch (error) {
+        console.warn(`❌ Azure model ${model} failed:`, error);
+        lastError = error as Error;
+        // Try next model
+      }
+    }
+
+    throw lastError || new Error('All Azure models failed');
+  }
+
+  private async analyzeWithModel(file: File, model: string): Promise<InvoiceProcessingResult> {
     try {
       // Step 1: Submit document for analysis
-      const analyzeUrl = `${this.config.endpoint}/formrecognizer/documentModels/prebuilt-invoice:analyze?api-version=2023-07-31`;
+      const analyzeUrl = `${this.config.endpoint}/formrecognizer/documentModels/${model}:analyze?api-version=2023-07-31`;
       
       const analyzeResponse = await fetch(analyzeUrl, {
         method: 'POST',
