@@ -406,28 +406,29 @@ export class TextExtractor {
       }
     } else {
       // Single line case (Lidl PDFs) - split on product row patterns
-      // Look for pattern: " 1 ProductName", " 2 ProductName", etc.
-      // Match line number followed by space and product name
+      // Lidl format: "1 Product Kg. qty price vat sub total 2 NextProduct Vnt. ..."
       const singleLine = lines.join(' ');
-      const productPattern = /\s+(\d+)\s+([A-ZĀČĒĢĪĶĻŅŠŪŽ][^\d]{2,}?)\s+(Kg\.|Vnt\.|L\.|ml\.|pcs\.)/gi;
       
-      let lastIndex = 0;
+      // Find all occurrences of row numbers followed by product data
+      // Pattern: " <number> <text> <unit> <numbers...>"
+      // Look for: space + digit(s) + space + text + Kg./Vnt./L. etc
+      const productPattern = /\s(\d+)\s+(.+?)\s+(Kg\.|Vnt\.|L\.|ml\.|pcs\.)\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)/gi;
+      
+      const matches: Array<{ index: number; fullMatch: string }> = [];
       let match;
-      const matches: { index: number; lineNum: number }[] = [];
       
       while ((match = productPattern.exec(singleLine)) !== null) {
-        const lineNum = parseInt(match[1]);
-        matches.push({ index: match.index, lineNum });
+        matches.push({ 
+          index: match.index,
+          fullMatch: match[0]
+        });
       }
       
-      // Extract rows between matches
-      for (let i = 0; i < matches.length; i++) {
-        const start = matches[i].index;
-        const end = i < matches.length - 1 ? matches[i + 1].index : singleLine.length;
-        const row = singleLine.substring(start, end).trim();
-        if (row) {
-          rows.push(row);
-        }
+      console.log(`🔍 Found ${matches.length} product row patterns in single-line PDF`);
+      
+      // Extract each matched product row
+      for (const m of matches) {
+        rows.push(m.fullMatch.trim());
       }
     }
 
