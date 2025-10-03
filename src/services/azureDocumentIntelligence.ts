@@ -11,6 +11,11 @@ interface AzureAnalysisResult {
   createdDateTime: string;
   lastUpdatedDateTime: string;
   analyzeResult?: {
+    apiVersion?: string;
+    modelId?: string;
+    stringIndexType?: string;
+    content?: string;
+    pages?: any[];
     documents: Array<{
       docType: string;
       fields: {
