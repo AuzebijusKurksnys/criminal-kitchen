@@ -164,31 +164,25 @@ export class TextExtractor {
   }
 
   private static fixLithuanianEncoding(text: string): string {
-    // Common character mapping issues in Lidl PDFs
-    const replacements: Record<string, string> = {
-      // Capital letters
-      '9': 'V',  // V often becomes 9
-      '3': 'P',  // P often becomes 3
-      'Ƴ': 'Į',
-      'ơ': 'ė',
-      'ǐ': 'į',
-      'ǌ': 'ū',
-      '\u0003': ' ',
-      '&': 'Š',
-      '$': 'A',
-      // Keep adding more mappings as we discover them
-    };
-
-    // Apply character replacements carefully (only at word boundaries for ambiguous chars)
+    // Apply character replacements carefully
     let fixed = text;
     
-    // Fix obvious patterns that are definitely encoding errors
+    // Fix obvious patterns that are definitely encoding errors (case-insensitive)
     fixed = fixed
-      .replace(/9([LRTS])/g, 'V$1')  // 9LUWRV -> VIRTOS
-      .replace(/3([RUL])/g, 'P$1')   // 3UHN -> PREK
-      .replace(/ǌ]ǐ/g, 'ūzų')        // kukurǌ]ǐ -> kukurūzų
-      .replace(/NXNXUǌ]ǐ/g, 'kukurūzų')
-      .replace(/EXUE/g, 'BURB')
+      // Capital letter patterns
+      .replace(/9([LRTS])/gi, 'V$1')  // 9LUWRV -> VIRTOS, 9luwrv -> Vluwrv
+      .replace(/3([RUL])/gi, 'P$1')   // 3UHN -> PREK
+      
+      // Specific word patterns (case-insensitive where possible)
+      .replace(/9LUWRV/gi, 'Virtos')         // VLUWRV -> Virtos
+      .replace(/VLUWRV/gi, 'Virtos')         // VLUWRV -> Virtos  
+      .replace(/NXNXUǌ]ǐ/gi, 'kukurūzų')     // NXNXUǌ]ǐ -> kukurūzų
+      .replace(/ǌ]ǐ/g, 'ūzų')                // kukurǌ]ǐ -> kukurūzų
+      .replace(/EXUE/gi, 'burb')             // EXUE/burb -> burb
+      .replace(/NXNXUū]ų/gi, 'kukurūzų')     // Partially fixed version
+      .replace(/1X1X8ūzų/gi, 'kukurūzų')     // Another variant
+      
+      // Header/label patterns
       .replace(/3LUNơMDV/g, 'Pirkėjas')
       .replace(/7LHNơMDV/g, 'Tiekėjas')
       .replace(/1DJHYLþLDXV/g, 'Nagevičiaus')
@@ -196,13 +190,21 @@ export class TextExtractor {
       .replace(/9LUãXOLãNLǐ/g, 'Viršuliškių')
       .replace(/ƲPRQơV/g, 'Įmonės')
       .replace(/390\u0003PRNơWRMR/g, 'PVM mokėtojo')
-      .replace(/3UHNLǐ\u0012DU\u0012SDVODXJǐ\u0003DSUDã\\PDV/g, 'Prekių ar paslaugų aprašymas');
-
-    // Clean up
-    return fixed
+      .replace(/3UHNLǐ\u0012DU\u0012SDVODXJǐ\u0003DSUDã\\PDV/g, 'Prekių ar paslaugų aprašymas')
+      
+      // Character-by-character replacements for mixed case
+      .replace(/NX/g, 'ku')   // N -> k, X -> u
+      .replace(/NU/g, 'ku')   // Alternative pattern
+      .replace(/8U/g, 'ūr')   // 8U -> ūr
+      
+      // Common single character fixes
       .replace(/\u0003/g, ' ')
       .replace(/\uFFFD/g, '')
-      .replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ')
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ');
+
+    // Clean up multiple spaces
+    return fixed
+      .replace(/\s+/g, ' ')
       .trim();
   }
 
