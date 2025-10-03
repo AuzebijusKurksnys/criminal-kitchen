@@ -186,12 +186,16 @@ export class AzureDocumentIntelligenceService {
     };
 
     // Add supplier info if available
-    if (fields.VendorName?.value) {
+    const vendorName = fields.VendorName?.value || fields.VendorName?.content;
+    if (vendorName) {
+      console.log('✅ Setting supplierInfo:', vendorName);
       result.supplierInfo = {
-        name: fields.VendorName.value,
+        name: vendorName,
         email: '',
         phone: ''
       };
+    } else {
+      console.warn('⚠️ No VendorName found in Azure response');
     }
 
     return result;
