@@ -159,18 +159,18 @@ export function InvoiceBatchUploadPage() {
 
   const getStatusColor = (status: BatchProcessingItem['status']) => {
     switch (status) {
-      case 'pending': return 'text-gray-500';
-      case 'processing': return 'text-blue-600';
+      case 'pending': return 'text-gray-400';
+      case 'processing': return 'text-blue-400';
       case 'completed': return 'text-green-600';
-      case 'error': return 'text-red-600';
-      default: return 'text-gray-500';
+      case 'error': return 'text-red-400';
+      default: return 'text-gray-400';
     }
   };
 
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Batch Invoice Processing</h1>
+        <h1 className="text-3xl font-bold text-gray-100">Batch Invoice Processing</h1>
         <p className="mt-2 text-lg text-gray-600">
           Upload multiple invoices and process them automatically
         </p>
@@ -179,12 +179,12 @@ export function InvoiceBatchUploadPage() {
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Upload Section */}
         <div className="space-y-6">
-          <div className="bg-white shadow-sm rounded-lg">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-medium text-gray-900">
+          <div className="bg-gray-900 shadow-sm rounded-lg">
+            <div className="px-6 py-4 border-b border-gray-800">
+              <h2 className="text-lg font-medium text-gray-100">
                 Select Invoice Files
               </h2>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-gray-400">
                 Choose multiple PDF documents or images of your invoices. PDF files are automatically converted to images for processing.
               </p>
             </div>
@@ -252,12 +252,12 @@ export function InvoiceBatchUploadPage() {
         {/* Processing Status Section */}
         <div className="space-y-6">
           {processingItems.length > 0 && (
-            <div className="bg-white shadow-sm rounded-lg">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-medium text-gray-900">
+            <div className="bg-gray-900 shadow-sm rounded-lg">
+              <div className="px-6 py-4 border-b border-gray-800">
+                <h2 className="text-lg font-medium text-gray-100">
                   Processing Status
                 </h2>
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm text-gray-400">
                   Track the progress of your batch processing
                 </p>
               </div>
@@ -270,7 +270,7 @@ export function InvoiceBatchUploadPage() {
                         <div className="flex items-center space-x-3">
                           <span className="text-2xl">{getStatusIcon(item.status)}</span>
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-900 truncate">
+                            <p className="text-sm font-medium text-gray-100 truncate">
                               {item.file.name}
                             </p>
                             <p className={`text-sm ${getStatusColor(item.status)}`}>
@@ -285,7 +285,7 @@ export function InvoiceBatchUploadPage() {
                         {item.status === 'completed' && item.result && (
                           <button
                             onClick={() => handleReviewInvoice(item)}
-                            className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200"
+                            className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded text-blue-700 bg-blue-500/20 hover:bg-blue-200"
                           >
                             Review
                           </button>

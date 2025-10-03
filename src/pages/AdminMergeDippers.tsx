@@ -93,13 +93,13 @@ export function AdminMergeDippers() {
   }, []);
 
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-white border rounded-lg shadow-sm">
+    <div className="max-w-3xl mx-auto p-6 bg-gray-900 border rounded-lg shadow-sm">
       <h1 className="text-2xl font-bold mb-4">Admin: Merge Dippers Products</h1>
       <p className="text-sm text-gray-600 mb-4">This one-time tool merges duplicate variants into the canonical product name and unit.</p>
       <div className="mb-4">
-        <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700">{running ? 'Running' : done ? 'Completed' : 'Idle'}</span>
+        <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-200">{running ? 'Running' : done ? 'Completed' : 'Idle'}</span>
       </div>
-      <pre className="text-sm bg-gray-50 p-3 rounded border max-h-96 overflow-auto whitespace-pre-wrap">{log.join('\n')}</pre>
+      <pre className="text-sm bg-gray-800 p-3 rounded border max-h-96 overflow-auto whitespace-pre-wrap">{log.join('\n')}</pre>
     </div>
   );
 }

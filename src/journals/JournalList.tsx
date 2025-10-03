@@ -52,7 +52,7 @@ export function JournalList({ entries, type, loading = false }: JournalListProps
               const temp = valueC as number;
               const isNormal = temp >= -5 && temp <= 8; // Example safe range
               return (
-                <span className={`font-medium ${isNormal ? 'text-green-600' : 'text-red-600'}`}>
+                <span className={`font-medium ${isNormal ? 'text-green-600' : 'text-red-400'}`}>
                   {temp}°C
                 </span>
               );
@@ -86,7 +86,7 @@ export function JournalList({ entries, type, loading = false }: JournalListProps
               const isDone = status === 'done';
               return (
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  isDone ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  isDone ? 'bg-green-100 text-green-800' : 'bg-red-500/20 text-red-800'
                 }`}>
                   {isDone ? 'Done' : 'Missed'}
                 </span>
@@ -121,7 +121,7 @@ export function JournalList({ entries, type, loading = false }: JournalListProps
               const isOk = status === 'ok';
               return (
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  isOk ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  isOk ? 'bg-green-100 text-green-800' : 'bg-red-500/20 text-red-800'
                 }`}>
                   {isOk ? 'OK' : 'Issue'}
                 </span>

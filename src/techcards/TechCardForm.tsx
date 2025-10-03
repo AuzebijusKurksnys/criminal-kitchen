@@ -128,7 +128,7 @@ export function TechCardForm({ techCard, products, onSubmit, onCancel, isSubmitt
 
           <div className="space-y-4">
             {formData.items.map((item, index) => (
-              <div key={index} className="bg-gray-50 rounded-lg p-4">
+              <div key={index} className="bg-gray-800 rounded-lg p-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
                     <label className="form-label text-sm">Product</label>

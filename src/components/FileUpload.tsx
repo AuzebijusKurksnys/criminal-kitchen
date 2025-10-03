@@ -135,7 +135,7 @@ export function FileUpload({
           border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer
           ${isDragging 
             ? 'border-blue-500 bg-blue-50' 
-            : 'border-gray-300 hover:border-gray-400'
+            : 'border-gray-700 hover:border-gray-400'
           }
           ${error ? 'border-red-300 bg-red-50' : ''}
         `}
@@ -150,10 +150,10 @@ export function FileUpload({
           </div>
           
           <div>
-            <p className="text-lg font-medium text-gray-900">
+            <p className="text-lg font-medium text-gray-100">
               {multiple ? 'Drop invoices here or click to upload' : 'Drop your invoice here or click to upload'}
             </p>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-400 mt-1">
               Supports PDF, JPG, PNG, GIF, WebP up to {Math.round(maxSize / 1024 / 1024)}MB
               {multiple ? ` • Max ${maxFiles} files` : ''}
             </p>
@@ -166,7 +166,7 @@ export function FileUpload({
                 e.stopPropagation();
                 openFileDialog();
               }}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="inline-flex items-center px-4 py-2 border border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-200 bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               📁 Browse Files
             </button>
@@ -177,7 +177,7 @@ export function FileUpload({
                 e.stopPropagation();
                 openCameraDialog();
               }}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="inline-flex items-center px-4 py-2 border border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-200 bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               📷 Take Photo
             </button>
@@ -186,7 +186,7 @@ export function FileUpload({
       </div>
 
       {error && (
-        <div className="mt-2 text-sm text-red-600">
+        <div className="mt-2 text-sm text-red-400">
           {error}
         </div>
       )}
@@ -234,16 +234,16 @@ export function MultipleFilePreview({ files, onRemove, onRemoveAll }: MultipleFi
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium text-gray-900">
+        <h3 className="text-lg font-medium text-gray-100">
           Selected Files ({files.length})
         </h3>
         <div className="flex items-center space-x-4">
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-gray-400">
             Total: {formatFileSize(totalSize)}
           </span>
           <button
             onClick={onRemoveAll}
-            className="text-red-600 hover:text-red-800 text-sm font-medium"
+            className="text-red-400 hover:text-red-800 text-sm font-medium"
           >
             Remove All
           </button>
@@ -296,7 +296,7 @@ export function FilePreview({ file, onRemove, showIndex }: FilePreviewProps) {
     <div className="border rounded-lg p-4 bg-gray-50">
       <div className="flex items-start space-x-4">
         {showIndex && (
-          <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+          <div className="flex-shrink-0 w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center">
             <span className="text-sm font-medium text-blue-700">{showIndex}</span>
           </div>
         )}
@@ -316,10 +316,10 @@ export function FilePreview({ file, onRemove, showIndex }: FilePreviewProps) {
         )}
         
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-900 truncate">
+          <p className="text-sm font-medium text-gray-100 truncate">
             {file.name}
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-400">
             {formatFileSize(file.size)}
           </p>
           <p className="text-xs text-gray-400">

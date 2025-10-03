@@ -171,7 +171,7 @@ export function InventoryPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card padding="md">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">
+              <div className="text-2xl font-bold text-blue-400">
                 {products.length}
               </div>
               <div className="text-sm text-gray-600">Total Products</div>
@@ -180,7 +180,7 @@ export function InventoryPage() {
 
           <Card padding="md">
             <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">
+              <div className="text-2xl font-bold text-red-400">
                 {products.filter(p => p.minStock && p.quantity <= p.minStock).length}
               </div>
               <div className="text-sm text-gray-600">Low Stock Items</div>

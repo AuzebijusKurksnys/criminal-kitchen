@@ -188,7 +188,7 @@ export function JournalsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card padding="md">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">
+              <div className="text-2xl font-bold text-blue-400">
                 {entries.length}
               </div>
               <div className="text-sm text-gray-600">Total Entries</div>
@@ -209,7 +209,7 @@ export function JournalsPage() {
 
           <Card padding="md">
             <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">
+              <div className="text-2xl font-bold text-red-400">
                 {entries.filter(entry => {
                   if (selectedType === 'temperature') return false; // No temp issues in basic implementation
                   return entry.status === 'missed' || entry.status === 'issue';

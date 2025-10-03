@@ -244,7 +244,7 @@ export function ProductForm({ product, onSubmit, onCancel, isSubmitting = false 
       {/* Preferred Supplier Section - only show when editing existing product */}
       {product && (
         <div className="border-t pt-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Supplier Information</h3>
+          <h3 className="text-lg font-medium text-gray-100 mb-4">Supplier Information</h3>
           
           {preferredSupplier && (
             <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
@@ -265,7 +265,7 @@ export function ProductForm({ product, onSubmit, onCancel, isSubmitting = false 
               placeholder={loadingSuppliers ? "Loading suppliers..." : "Select preferred supplier"}
               disabled={loadingSuppliers}
             />
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-400 mt-1">
               Set which supplier is preferred for this product. This affects pricing calculations and ordering.
             </p>
             {errors.preferredSupplierId && <p className="form-error">{errors.preferredSupplierId}</p>}

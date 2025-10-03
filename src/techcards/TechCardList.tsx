@@ -127,7 +127,7 @@ export function TechCardList({ techCards, products, onEdit, onDelete, loading = 
         if (!hasAllPrices) {
           return (
             <div className="flex flex-col">
-              <span className="text-red-600 font-medium">No price</span>
+              <span className="text-red-400 font-medium">No price</span>
               <span className="text-xs text-red-500">Missing supplier prices</span>
             </div>
           );
@@ -138,7 +138,7 @@ export function TechCardList({ techCards, products, onEdit, onDelete, loading = 
             <span className="font-medium">
               {formatPrice(cost, restaurantConfig.currency)}
             </span>
-            <span className="text-xs text-gray-500">Total cost</span>
+            <span className="text-xs text-gray-400">Total cost</span>
           </div>
         );
       },
@@ -160,7 +160,7 @@ export function TechCardList({ techCards, products, onEdit, onDelete, loading = 
             <span className="font-medium text-green-600">
               {formatPrice(suggestedPrice, restaurantConfig.currency)}
             </span>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-400">
               {restaurantConfig.markupMultiplier}x markup
             </span>
           </div>
@@ -181,7 +181,7 @@ export function TechCardList({ techCards, products, onEdit, onDelete, loading = 
         const margin = formatMargin(suggestedPrice, cost);
         
         return (
-          <span className="font-medium text-blue-600">{margin}</span>
+          <span className="font-medium text-blue-400">{margin}</span>
         );
       },
     },
@@ -192,13 +192,13 @@ export function TechCardList({ techCards, products, onEdit, onDelete, loading = 
         <div className="flex space-x-2">
           <button
             onClick={() => onEdit(techCard)}
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+            className="text-blue-400 hover:text-blue-800 text-sm font-medium"
           >
             View
           </button>
           <button
             onClick={() => onDelete(techCard.id)}
-            className="text-red-600 hover:text-red-800 text-sm font-medium"
+            className="text-red-400 hover:text-red-800 text-sm font-medium"
           >
             Delete
           </button>

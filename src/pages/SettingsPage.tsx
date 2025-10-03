@@ -69,7 +69,7 @@ export function SettingsPage() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+        <h1 className="text-3xl font-bold text-gray-100">Settings</h1>
         <p className="mt-2 text-gray-600">
           Configure your Criminal Kitchen application preferences
         </p>
@@ -77,10 +77,10 @@ export function SettingsPage() {
 
       <div className="space-y-6">
         {/* OpenAI Configuration */}
-        <div className="bg-white shadow-sm rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">OpenAI Configuration</h2>
-            <p className="mt-1 text-sm text-gray-500">
+        <div className="bg-gray-900 shadow-sm rounded-lg">
+          <div className="px-6 py-4 border-b border-gray-800">
+            <h2 className="text-lg font-medium text-gray-100">OpenAI Configuration</h2>
+            <p className="mt-1 text-sm text-gray-400">
               AI-powered invoice processing status
             </p>
           </div>
@@ -92,20 +92,20 @@ export function SettingsPage() {
                 OpenAI API key configured via environment variables
               </div>
             ) : (
-              <div className="flex items-center text-sm text-red-600">
+              <div className="flex items-center text-sm text-red-400">
                 <span className="mr-2">❌</span>
                 OpenAI API key not found in environment variables
               </div>
             )}
             
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-400">
               <p>OpenAI API key is now configured via Vercel environment variables for security.</p>
               <p>Set VITE_OPENAI_API_KEY in your deployment environment.</p>
             </div>
 
             {isOpenAIInitialized() && (
               <div className="mt-6">
-                <label htmlFor="preferred-model" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="preferred-model" className="block text-sm font-medium text-gray-200">
                   Preferred OpenAI Model
                 </label>
                 <select
@@ -116,7 +116,7 @@ export function SettingsPage() {
                     handleInputChange('preferredOpenAIModel', model);
                     openaiInvoiceProcessor.setPreferredModel(model);
                   }}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 >
                   {Object.entries(OPENAI_MODELS).map(([key, config]) => (
                     <option key={key} value={key}>
@@ -124,7 +124,7 @@ export function SettingsPage() {
                     </option>
                   ))}
                 </select>
-                <div className="mt-2 text-xs text-gray-500">
+                <div className="mt-2 text-xs text-gray-400">
                   <div className="mb-1">
                     <strong>Current model strengths:</strong> {OPENAI_MODELS[settings.preferredOpenAIModel]?.strengths.join(', ')}
                   </div>
@@ -141,30 +141,30 @@ export function SettingsPage() {
                 type="checkbox"
                 checked={settings.autoProcessInvoices}
                 onChange={(e) => handleInputChange('autoProcessInvoices', e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-400 focus:ring-blue-500 border-gray-700 rounded"
               />
-              <label htmlFor="auto-process" className="ml-2 block text-sm text-gray-900">
+              <label htmlFor="auto-process" className="ml-2 block text-sm text-gray-100">
                 Auto-process invoices without manual review
               </label>
             </div>
-            <p className="text-sm text-gray-500 ml-6">
+            <p className="text-sm text-gray-400 ml-6">
               When enabled, approved invoices will automatically update inventory without requiring manual confirmation
             </p>
           </div>
         </div>
 
         {/* Invoice Defaults */}
-        <div className="bg-white shadow-sm rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">Invoice Defaults</h2>
-            <p className="mt-1 text-sm text-gray-500">
+        <div className="bg-gray-900 shadow-sm rounded-lg">
+          <div className="px-6 py-4 border-b border-gray-800">
+            <h2 className="text-lg font-medium text-gray-100">Invoice Defaults</h2>
+            <p className="mt-1 text-sm text-gray-400">
               Default values for invoice processing
             </p>
           </div>
           
           <div className="p-6 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-200 mb-2">
                 Default VAT Rate (%)
               </label>
               <input
@@ -174,9 +174,9 @@ export function SettingsPage() {
                 step="0.1"
                 value={settings.defaultVatRate}
                 onChange={(e) => handleInputChange('defaultVatRate', parseFloat(e.target.value))}
-                className="block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                className="block w-32 rounded-md border-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
               />
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-gray-400">
                 Applied when VAT rate is not detected in invoice
               </p>
             </div>
@@ -187,9 +187,9 @@ export function SettingsPage() {
                 type="checkbox"
                 checked={settings.invoiceNotifications}
                 onChange={(e) => handleInputChange('invoiceNotifications', e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-400 focus:ring-blue-500 border-gray-700 rounded"
               />
-              <label htmlFor="notifications" className="ml-2 block text-sm text-gray-900">
+              <label htmlFor="notifications" className="ml-2 block text-sm text-gray-100">
                 Enable invoice processing notifications
               </label>
             </div>
@@ -197,10 +197,10 @@ export function SettingsPage() {
         </div>
 
         {/* Data & Privacy */}
-        <div className="bg-white shadow-sm rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">Data & Privacy</h2>
-            <p className="mt-1 text-sm text-gray-500">
+        <div className="bg-gray-900 shadow-sm rounded-lg">
+          <div className="px-6 py-4 border-b border-gray-800">
+            <h2 className="text-lg font-medium text-gray-100">Data & Privacy</h2>
+            <p className="mt-1 text-sm text-gray-400">
               Information about data handling
             </p>
           </div>

@@ -113,7 +113,7 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
   const getStockStatusColor = (status: string) => {
     switch (status) {
       case 'low':
-        return 'text-red-600 bg-red-50 border-red-200';
+        return 'text-red-400 bg-red-50 border-red-200';
       default:
         return 'text-green-600 bg-green-50 border-green-200';
     }
@@ -153,7 +153,7 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
               if (input) input.indeterminate = isPartiallySelected;
             }}
             onChange={handleSelectAll}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            className="h-4 w-4 text-blue-400 focus:ring-blue-500 border-gray-700 rounded"
           />
         </div>
       ),
@@ -163,7 +163,7 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
             type="checkbox"
             checked={selectedProducts.has(product.id)}
             onChange={() => handleSelectProduct(product.id)}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            className="h-4 w-4 text-blue-400 focus:ring-blue-500 border-gray-700 rounded"
           />
         </div>
       ),
@@ -206,7 +206,7 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
         <div className="flex flex-col">
           <span className="font-medium">{formatQuantity(value, product.unit)}</span>
           {product.minStock && (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-400">
               Min: {formatQuantity(product.minStock, product.unit)}
             </span>
           )}
@@ -219,7 +219,7 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
       sortable: true,
       render: (value) => (
         value ? (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-800">
             {value}
           </span>
         ) : (
@@ -246,13 +246,13 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
         <div className="flex space-x-2">
           <button
             onClick={() => onEdit(product)}
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+            className="text-blue-400 hover:text-blue-800 text-sm font-medium"
           >
             Edit
           </button>
           <button
             onClick={() => handleDeleteClick(product)}
-            className="text-red-600 hover:text-red-800 text-sm font-medium"
+            className="text-red-400 hover:text-red-800 text-sm font-medium"
           >
             Delete
           </button>
@@ -265,11 +265,11 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
     <>
       <div className="space-y-4">
         {/* Filters */}
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-gray-900 p-4 rounded-lg shadow-sm border border-gray-800">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Search */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-200 mb-1">
                 Search
               </label>
               <SearchInput
@@ -282,7 +282,7 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
 
             {/* Unit Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-200 mb-1">
                 Unit
               </label>
               <Select
@@ -295,7 +295,7 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
 
             {/* Category Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-200 mb-1">
                 Category
               </label>
               <Select
@@ -308,7 +308,7 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
 
             {/* Stock Level Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-200 mb-1">
                 Stock Level
               </label>
               <Select
@@ -333,7 +333,7 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
                   setCategoryFilter('');
                   setStockLevelFilter('');
                 }}
-                className="text-blue-600 hover:text-blue-800"
+                className="text-blue-400 hover:text-blue-800"
               >
                 Clear all filters
               </button>
@@ -350,7 +350,7 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
               <>{products.length} products total</>
             )}
             {selectedProducts.size > 0 && (
-              <span className="ml-2 text-blue-600 font-medium">
+              <span className="ml-2 text-blue-400 font-medium">
                 ({selectedProducts.size} selected)
               </span>
             )}

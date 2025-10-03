@@ -79,15 +79,15 @@ export function ReportsPage() {
             {reportSections.map((section, sectionIndex) => (
               <div key={sectionIndex}>
                 <div className="mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">{section.title}</h3>
+                  <h3 className="text-lg font-semibold text-gray-100">{section.title}</h3>
                   <p className="text-sm text-gray-600">{section.description}</p>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {section.reports.map((report, reportIndex) => (
-                    <div key={reportIndex} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
+                    <div key={reportIndex} className="border border-gray-800 rounded-lg p-4 hover:border-gray-700 transition-colors">
                       <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-medium text-gray-900">{report.name}</h4>
+                        <h4 className="font-medium text-gray-100">{report.name}</h4>
                         <button
                           disabled
                           className="btn-secondary btn-sm opacity-50 cursor-not-allowed"
@@ -102,7 +102,7 @@ export function ReportsPage() {
                           <button
                             key={formatIndex}
                             disabled
-                            className="inline-flex items-center px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-500 bg-gray-50 cursor-not-allowed"
+                            className="inline-flex items-center px-2 py-1 border border-gray-700 rounded text-xs font-medium text-gray-400 bg-gray-800 cursor-not-allowed"
                             title={format.description}
                           >
                             {format.format}

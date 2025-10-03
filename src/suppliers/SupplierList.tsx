@@ -53,7 +53,7 @@ export function SupplierList({ suppliers, onEdit, onDelete, loading = false }: S
         value ? (
           <a 
             href={`mailto:${value}`} 
-            className="text-blue-600 hover:text-blue-800"
+            className="text-blue-400 hover:text-blue-800"
           >
             {value}
           </a>
@@ -70,7 +70,7 @@ export function SupplierList({ suppliers, onEdit, onDelete, loading = false }: S
         value ? (
           <a 
             href={`tel:${value}`} 
-            className="text-blue-600 hover:text-blue-800"
+            className="text-blue-400 hover:text-blue-800"
           >
             {value}
           </a>
@@ -86,13 +86,13 @@ export function SupplierList({ suppliers, onEdit, onDelete, loading = false }: S
         <div className="flex space-x-2">
           <button
             onClick={() => onEdit(supplier)}
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+            className="text-blue-400 hover:text-blue-800 text-sm font-medium"
           >
             Edit
           </button>
           <button
             onClick={() => handleDeleteClick(supplier)}
-            className="text-red-600 hover:text-red-800 text-sm font-medium"
+            className="text-red-400 hover:text-red-800 text-sm font-medium"
           >
             Delete
           </button>

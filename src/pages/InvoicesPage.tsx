@@ -399,7 +399,7 @@ export function InvoicesPage() {
                   <p className="text-2xl font-semibold text-gray-100">{count}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-gray-500">Total</p>
+                  <p className="text-sm text-gray-400">Total</p>
                   <p className="text-lg font-normal text-gray-200">
                     {formatPrice(total, 'EUR')}
                   </p>
@@ -452,7 +452,7 @@ export function InvoicesPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className="text-gray-500">{isSupplierExpanded ? '▼' : '▶'}</span>
+                    <span className="text-gray-400">{isSupplierExpanded ? '▼' : '▶'}</span>
                   </div>
                 </button>
 
@@ -479,7 +479,7 @@ export function InvoicesPage() {
                                 </p>
                               </div>
                             </div>
-                            <span className="text-gray-500 text-sm">{isYearExpanded ? '▼' : '▶'}</span>
+                            <span className="text-gray-400 text-sm">{isYearExpanded ? '▼' : '▶'}</span>
                           </button>
 
                           {/* Month Folders within Year */}
@@ -500,12 +500,12 @@ export function InvoicesPage() {
                                         <span className="text-base">{isMonthExpanded ? '📂' : '📁'}</span>
                                         <div className="text-left">
                                           <h5 className="text-sm font-normal text-gray-300">{month.monthLabel}</h5>
-                                          <p className="text-xs text-gray-500">
+                                          <p className="text-xs text-gray-400">
                                             {month.count} invoice{month.count !== 1 ? 's' : ''} · {formatPrice(month.totalAmount, 'EUR')}
                                           </p>
                                         </div>
                                       </div>
-                                      <span className="text-gray-500 text-xs">{isMonthExpanded ? '▼' : '▶'}</span>
+                                      <span className="text-gray-400 text-xs">{isMonthExpanded ? '▼' : '▶'}</span>
                                     </button>
 
                                     {/* Invoices in Month */}
@@ -522,32 +522,32 @@ export function InvoicesPage() {
                                         type="checkbox"
                                         checked={selectedInvoices.has(invoice.id)}
                                         onChange={() => handleSelectInvoice(invoice.id)}
-                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                        className="h-4 w-4 text-blue-400 focus:ring-blue-500 border-gray-700 rounded"
                                       />
                                       
                                       <div className="flex-1 grid grid-cols-6 gap-4">
                                         <div>
                                           <div className="text-sm font-normal text-gray-200">{invoice.invoiceNumber}</div>
-                                          <div className="text-xs text-gray-500">
+                                          <div className="text-xs text-gray-400">
                                             {invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '-'}
                                           </div>
                                         </div>
                                         
                                         <div>
                                           <div className="text-sm text-gray-300">{formatPrice(invoice.totalInclVat || 0, invoice.currency || 'EUR')}</div>
-                                          <div className="text-xs text-gray-500">incl. VAT</div>
+                                          <div className="text-xs text-gray-400">incl. VAT</div>
                                         </div>
                                         
                                         <div>
                                           <div className="text-sm text-gray-300">{formatPrice(invoice.totalExclVat || 0, invoice.currency || 'EUR')}</div>
-                                          <div className="text-xs text-gray-500">excl. VAT</div>
+                                          <div className="text-xs text-gray-400">excl. VAT</div>
                                         </div>
                                         
                                         <div>
                                           <div className="text-sm text-gray-300">
                                             {(invoice.discountAmount || 0) > 0 ? formatPrice(invoice.discountAmount || 0, invoice.currency || 'EUR') : '-'}
                                           </div>
-                                          <div className="text-xs text-gray-500">discount</div>
+                                          <div className="text-xs text-gray-400">discount</div>
                                         </div>
                                         
                                         <div>

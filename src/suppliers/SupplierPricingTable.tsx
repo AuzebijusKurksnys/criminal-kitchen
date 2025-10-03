@@ -57,7 +57,7 @@ export function SupplierPricingTable({
           <span className="font-medium text-lg">
             {formatPrice(price, supplierPrice.currency)}
           </span>
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-gray-400">
             per {product.unit}
           </span>
         </div>
@@ -101,13 +101,13 @@ export function SupplierPricingTable({
         <div className="flex space-x-2">
           <button
             onClick={() => onEdit(supplierPrice)}
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+            className="text-blue-400 hover:text-blue-800 text-sm font-medium"
           >
             Edit
           </button>
           <button
             onClick={() => handleDeleteClick(supplierPrice)}
-            className="text-red-600 hover:text-red-800 text-sm font-medium"
+            className="text-red-400 hover:text-red-800 text-sm font-medium"
           >
             Delete
           </button>
@@ -119,10 +119,10 @@ export function SupplierPricingTable({
   return (
     <>
       <div className="space-y-4">
-        <div className="bg-gray-50 rounded-lg p-4">
+        <div className="bg-gray-800 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-medium text-gray-900">
+              <h3 className="text-lg font-medium text-gray-100">
                 {product.name}
               </h3>
               <p className="text-sm text-gray-600">

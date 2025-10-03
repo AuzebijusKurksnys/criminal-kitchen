@@ -72,7 +72,7 @@ export function Table<T>({
   if (loading) {
     return (
       <div className={`table-container ${className}`}>
-        <div className="p-8 text-center text-gray-500">
+        <div className="p-8 text-center text-gray-400">
           Loading...
         </div>
       </div>
@@ -82,7 +82,7 @@ export function Table<T>({
   if (data.length === 0) {
     return (
       <div className={`table-container ${className}`}>
-        <div className="p-8 text-center text-gray-500">
+        <div className="p-8 text-center text-gray-400">
           {emptyMessage}
         </div>
       </div>
@@ -92,14 +92,14 @@ export function Table<T>({
   return (
     <div className={`table-container ${className}`}>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-gray-800">
+          <thead className="bg-gray-800">
             <tr>
               {columns.map((column) => (
                 <th
                   key={String(column.key)}
-                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
-                    column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''
+                  className={`px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider ${
+                    column.sortable ? 'cursor-pointer hover:bg-gray-700' : ''
                   } ${column.className || ''}`}
                   onClick={() => column.sortable && handleSort(String(column.key))}
                 >
@@ -110,7 +110,7 @@ export function Table<T>({
                         <svg
                           className={`w-3 h-3 ${
                             sortColumn === column.key && sortDirection === 'asc'
-                              ? 'text-blue-600'
+                              ? 'text-blue-400'
                               : 'text-gray-400'
                           }`}
                           fill="currentColor"
@@ -121,7 +121,7 @@ export function Table<T>({
                         <svg
                           className={`w-3 h-3 -mt-1 ${
                             sortColumn === column.key && sortDirection === 'desc'
-                              ? 'text-blue-600'
+                              ? 'text-blue-400'
                               : 'text-gray-400'
                           }`}
                           fill="currentColor"
@@ -136,7 +136,7 @@ export function Table<T>({
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-gray-900 divide-y divide-gray-800">
             {sortedData.map((item, index) => (
               <tr key={keyExtractor ? keyExtractor(item) : index} className="table-row">
                 {columns.map((column) => {
@@ -144,7 +144,7 @@ export function Table<T>({
                   return (
                     <td
                       key={String(column.key)}
-                      className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${column.className || ''}`}
+                      className={`px-6 py-4 whitespace-nowrap text-sm text-gray-100 ${column.className || ''}`}
                     >
                       {column.render ? column.render(value, item) : value}
                     </td>

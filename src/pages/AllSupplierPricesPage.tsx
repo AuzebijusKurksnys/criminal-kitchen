@@ -185,7 +185,7 @@ export function AllSupplierPricesPage() {
               if (input) input.indeterminate = isPartiallySelected;
             }}
             onChange={handleSelectAll}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            className="h-4 w-4 text-blue-400 focus:ring-blue-500 border-gray-700 rounded"
           />
         </div>
       ),
@@ -195,7 +195,7 @@ export function AllSupplierPricesPage() {
             type="checkbox"
             checked={selectedPrices.has(price.id)}
             onChange={() => handleSelectPrice(price.id)}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            className="h-4 w-4 text-blue-400 focus:ring-blue-500 border-gray-700 rounded"
           />
         </div>
       ),
@@ -215,7 +215,7 @@ export function AllSupplierPricesPage() {
       render: (value, price) => (
         <div className="flex flex-col">
           <span className="font-medium">{value}</span>
-          <span className="text-xs text-gray-500">ID: {price.productId.slice(0, 8)}...</span>
+          <span className="text-xs text-gray-400">ID: {price.productId.slice(0, 8)}...</span>
         </div>
       ),
     },
@@ -241,7 +241,7 @@ export function AllSupplierPricesPage() {
       render: (value, price) => (
         <div className="text-right">
           <div className="font-medium">{formatPrice(value, price.currency)}</div>
-          <div className="text-xs text-gray-500">Excl. VAT</div>
+          <div className="text-xs text-gray-400">Excl. VAT</div>
         </div>
       ),
     },
@@ -252,7 +252,7 @@ export function AllSupplierPricesPage() {
       render: (value, price) => (
         <div className="text-right">
           <div className="font-medium text-green-600">{formatPrice(value, price.currency)}</div>
-          <div className="text-xs text-gray-500">Incl. {price.vatRate}% VAT</div>
+          <div className="text-xs text-gray-400">Incl. {price.vatRate}% VAT</div>
         </div>
       ),
     },
@@ -273,7 +273,7 @@ export function AllSupplierPricesPage() {
       render: (value, price) => (
         <div className="text-sm">
           {value ? (
-            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-500/20 text-blue-800">
               📄 {value}
             </span>
           ) : (
@@ -299,7 +299,7 @@ export function AllSupplierPricesPage() {
         <div className="flex items-center space-x-2">
           <button
             onClick={() => setDeleteConfirm({ show: true, price })}
-            className="text-red-600 hover:text-red-800 text-sm"
+            className="text-red-400 hover:text-red-800 text-sm"
             title="Delete price"
           >
             🗑️
@@ -314,25 +314,25 @@ export function AllSupplierPricesPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">All Supplier Prices</h1>
+          <h1 className="text-3xl font-bold text-gray-100">All Supplier Prices</h1>
           <p className="mt-2 text-gray-600">
             View and manage all supplier pricing information across products
           </p>
         </div>
         <button
           onClick={() => navigate('/supplier-prices')}
-          className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          className="inline-flex items-center px-4 py-2 border border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-200 bg-gray-900 hover:bg-gray-50"
         >
           ← Back to Product View
         </button>
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-gray-900 p-4 rounded-lg shadow-sm border border-gray-800">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Search */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-200 mb-1">
               Search Products/Suppliers
             </label>
             <SearchInput
@@ -345,7 +345,7 @@ export function AllSupplierPricesPage() {
 
           {/* Supplier Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-200 mb-1">
               Supplier
             </label>
             <Select
@@ -358,7 +358,7 @@ export function AllSupplierPricesPage() {
 
           {/* Currency Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-200 mb-1">
               Currency
             </label>
             <Select
@@ -371,7 +371,7 @@ export function AllSupplierPricesPage() {
 
           {/* Preferred Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-200 mb-1">
               Preference
             </label>
             <Select
@@ -396,7 +396,7 @@ export function AllSupplierPricesPage() {
                 setCurrencyFilter('');
                 setPreferredFilter('');
               }}
-              className="text-blue-600 hover:text-blue-800"
+              className="text-blue-400 hover:text-blue-800"
             >
               Clear all filters
             </button>
@@ -420,7 +420,7 @@ export function AllSupplierPricesPage() {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-gray-900 rounded-lg shadow-sm border border-gray-800">
         <Table
           data={filteredPrices}
           columns={columns}

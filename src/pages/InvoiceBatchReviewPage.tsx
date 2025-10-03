@@ -428,7 +428,7 @@ export function InvoiceBatchReviewPage() {
     return (
       <div className="max-w-4xl mx-auto text-center py-12">
         <div className="text-6xl mb-4">✅</div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">Batch Processing Complete!</h1>
+        <h1 className="text-3xl font-bold text-gray-100 mb-4">Batch Processing Complete!</h1>
         <p className="text-lg text-gray-600 mb-8">All invoices have been processed and added to your system.</p>
         <button
           onClick={() => navigate('/invoices')}
@@ -480,7 +480,7 @@ export function InvoiceBatchReviewPage() {
           <div className="text-center py-12 px-4">
             <div className="text-6xl mb-4">📦</div>
             <p className="text-xl font-medium text-gray-300 mb-2">No products found</p>
-            <p className="text-gray-500 text-sm">
+            <p className="text-gray-400 text-sm">
               Try re-processing the invoices
             </p>
           </div>

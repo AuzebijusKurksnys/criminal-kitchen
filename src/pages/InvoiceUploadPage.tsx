@@ -60,20 +60,20 @@ export function InvoiceUploadPage() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Upload Invoice</h1>
+        <h1 className="text-3xl font-bold text-gray-100">Upload Invoice</h1>
         <p className="mt-2 text-gray-600">
           Upload your supplier invoice to automatically extract product information and update inventory.
         </p>
         
         {/* Upload Mode Selector */}
         <div className="mt-6 flex justify-center">
-          <div className="bg-white rounded-lg p-1 border border-gray-200 inline-flex">
+          <div className="bg-gray-900 rounded-lg p-1 border border-gray-800 inline-flex">
             <button className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md">
               Single Invoice
             </button>
             <button 
               onClick={handleBatchUpload}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md"
+              className="px-4 py-2 text-sm font-medium text-gray-200 hover:text-gray-100 hover:bg-gray-800 rounded-md"
             >
               Batch Upload
             </button>
@@ -107,12 +107,12 @@ export function InvoiceUploadPage() {
         </div>
       )}
 
-      <div className="bg-white shadow-sm rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">
+      <div className="bg-gray-900 shadow-sm rounded-lg">
+        <div className="px-6 py-4 border-b border-gray-800">
+          <h2 className="text-lg font-medium text-gray-100">
             Step 1: Select Invoice File
           </h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-gray-400">
             Upload an image or PDF of your invoice (JPG, PNG, GIF, WebP, or PDF format)
           </p>
         </div>
@@ -134,7 +134,7 @@ export function InvoiceUploadPage() {
               <div className="flex justify-between items-center">
                 <button
                   onClick={handleRemoveFile}
-                  className="text-sm text-gray-500 hover:text-gray-700"
+                  className="text-sm text-gray-400 hover:text-gray-200"
                 >
                   Choose different file
                 </button>
@@ -142,7 +142,7 @@ export function InvoiceUploadPage() {
                 <div className="flex space-x-3">
                   <button
                     onClick={() => navigate('/invoices')}
-                    className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="px-4 py-2 border border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-200 bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
                     Cancel
                   </button>
@@ -197,7 +197,7 @@ export function InvoiceUploadPage() {
           </div>
         </div>
         
-        <div className="mt-4 p-3 bg-blue-100 rounded">
+        <div className="mt-4 p-3 bg-blue-500/20 rounded">
           <p className="text-sm text-blue-800">
             <strong>Tip:</strong> For best results, ensure your invoice is clearly visible and well-lit if taking a photo.
             PDF files are automatically converted to images for processing. The system works with both Lithuanian and English invoices.

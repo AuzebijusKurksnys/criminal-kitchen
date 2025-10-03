@@ -439,7 +439,7 @@ export function InvoiceReviewPage() {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Review Invoice Data</h1>
+        <h1 className="text-3xl font-bold text-gray-100">Review Invoice Data</h1>
         <p className="mt-2 text-gray-600">
           Review and confirm the extracted data before processing the invoice.
         </p>
@@ -463,58 +463,58 @@ export function InvoiceReviewPage() {
 
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Invoice Details */}
-        <div className="bg-white shadow-sm rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">Invoice Details</h2>
+        <div className="bg-gray-900 shadow-sm rounded-lg">
+          <div className="px-6 py-4 border-b border-gray-800">
+            <h2 className="text-lg font-medium text-gray-100">Invoice Details</h2>
           </div>
           
           <div className="p-6 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Invoice Number</label>
+              <label className="block text-sm font-medium text-gray-200">Invoice Number</label>
               <input
                 type="text"
                 value={extractedData.invoice.invoiceNumber || ''}
                 onChange={(e) => handleInvoiceDataChange('invoiceNumber', e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Invoice Date</label>
+              <label className="block text-sm font-medium text-gray-200">Invoice Date</label>
               <input
                 type="date"
                 value={extractedData.invoice.invoiceDate || ''}
                 onChange={(e) => handleInvoiceDataChange('invoiceDate', e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Total Excl. VAT</label>
+                <label className="block text-sm font-medium text-gray-200">Total Excl. VAT</label>
                 <input
                   type="number"
                   step="0.01"
                   value={extractedData.invoice.totalExclVat || 0}
                   onChange={(e) => handleInvoiceDataChange('totalExclVat', parseFloat(e.target.value))}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Total Incl. VAT</label>
+                <label className="block text-sm font-medium text-gray-200">Total Incl. VAT</label>
                 <input
                   type="number"
                   step="0.01"
                   value={extractedData.invoice.totalInclVat || 0}
                   onChange={(e) => handleInvoiceDataChange('totalInclVat', parseFloat(e.target.value))}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Supplier</label>
+              <label className="block text-sm font-medium text-gray-200">Supplier</label>
               <div className="mt-1 flex space-x-2">
                 <Select
                   value={selectedSupplierId}
@@ -537,9 +537,9 @@ export function InvoiceReviewPage() {
         </div>
 
         {/* File Preview */}
-        <div className="bg-white shadow-sm rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">Uploaded File</h2>
+        <div className="bg-gray-900 shadow-sm rounded-lg">
+          <div className="px-6 py-4 border-b border-gray-800">
+            <h2 className="text-lg font-medium text-gray-100">Uploaded File</h2>
           </div>
           
           <div className="p-6">
@@ -549,8 +549,8 @@ export function InvoiceReviewPage() {
                   {file.type.includes('pdf') ? '📄' : '📷'}
                 </span>
                 <div>
-                  <p className="font-medium text-gray-900">{file.name}</p>
-                  <p className="text-sm text-gray-500">
+                  <p className="font-medium text-gray-100">{file.name}</p>
+                  <p className="text-sm text-gray-400">
                     {(file.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                 </div>
@@ -561,40 +561,40 @@ export function InvoiceReviewPage() {
       </div>
 
       {/* Line Items */}
-      <div className="mt-8 bg-white shadow-sm rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">Invoice Line Items</h2>
+      <div className="mt-8 bg-gray-900 shadow-sm rounded-lg">
+        <div className="px-6 py-4 border-b border-gray-800">
+          <h2 className="text-lg font-medium text-gray-100">Invoice Line Items</h2>
         </div>
         
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-full divide-y divide-gray-800">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                   #
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                   Product
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                   Qty
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                   Unit Price
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                   Total
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                   Match Product
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-gray-900 divide-y divide-gray-800">
               {extractedData.lineItems.map((lineItem, index) => (
                 <tr key={index}>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-sm font-medium text-gray-100">
                       {index + 1}
                     </span>
                   </td>
@@ -605,7 +605,7 @@ export function InvoiceReviewPage() {
                           type="text"
                           value={lineItem.productName}
                           onChange={(e) => handleLineItemChange(index, 'productName', e.target.value)}
-                          className="flex-1 border-gray-300 rounded-md text-sm"
+                          className="flex-1 border-gray-700 rounded-md text-sm"
                           placeholder="Product name (edit if OCR is wrong)"
                         />
                         <button
@@ -617,7 +617,7 @@ export function InvoiceReviewPage() {
                         </button>
                       </div>
                       {lineItem.description && (
-                        <p className="text-xs text-gray-500 mt-1">{lineItem.description}</p>
+                        <p className="text-xs text-gray-400 mt-1">{lineItem.description}</p>
                       )}
                       {editingItems[index] && (
                         <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
@@ -639,13 +639,13 @@ export function InvoiceReviewPage() {
                         step="0.01"
                         value={lineItem.quantity}
                         onChange={(e) => handleLineItemChange(index, 'quantity', parseFloat(e.target.value))}
-                        className="w-16 border-gray-300 rounded-md text-sm"
+                        className="w-16 border-gray-700 rounded-md text-sm"
                       />
                       <input
                         type="text"
                         value={lineItem.unit}
                         onChange={(e) => handleLineItemChange(index, 'unit', e.target.value)}
-                        className="w-12 border-gray-300 rounded-md text-sm"
+                        className="w-12 border-gray-700 rounded-md text-sm"
                       />
                     </div>
                   </td>
@@ -655,7 +655,7 @@ export function InvoiceReviewPage() {
                       step="0.01"
                       value={lineItem.unitPrice}
                       onChange={(e) => handleLineItemChange(index, 'unitPrice', parseFloat(e.target.value))}
-                      className="w-20 border-gray-300 rounded-md text-sm"
+                      className="w-20 border-gray-700 rounded-md text-sm"
                     />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -676,7 +676,7 @@ export function InvoiceReviewPage() {
                         className="w-48"
                       />
                     ) : (
-                      <span className="text-sm text-gray-500">No matches - will create new</span>
+                      <span className="text-sm text-gray-400">No matches - will create new</span>
                     )}
                   </td>
                 </tr>
@@ -690,7 +690,7 @@ export function InvoiceReviewPage() {
       <div className="mt-8 flex justify-between">
         <button
           onClick={() => navigate('/invoices/upload')}
-          className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          className="px-4 py-2 border border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-200 bg-gray-900 hover:bg-gray-50"
         >
           Back to Upload
         </button>
@@ -698,7 +698,7 @@ export function InvoiceReviewPage() {
         <div className="flex space-x-3">
           <button
             onClick={() => navigate('/invoices')}
-            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            className="px-4 py-2 border border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-200 bg-gray-900 hover:bg-gray-50"
           >
             Cancel
           </button>

@@ -145,9 +145,9 @@ export function SupplierPriceForm({
             type="checkbox"
             checked={formData.preferred}
             onChange={(e) => handleChange('preferred', e.target.checked)}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            className="h-4 w-4 text-blue-400 focus:ring-blue-500 border-gray-700 rounded"
           />
-          <label htmlFor="preferred" className="ml-2 text-sm text-gray-700">
+          <label htmlFor="preferred" className="ml-2 text-sm text-gray-200">
             Set as preferred supplier for this product
           </label>
         </div>
