@@ -131,8 +131,12 @@ export class TextExtractor {
         fullText += pageText + '\n\n';
       }
 
-      // Fix encoding issues before returning
-      const fixedText = this.fixLithuanianEncoding(fullText);
+      // Fix encoding issues AGGRESSIVELY before returning
+      let fixedText = this.fixLithuanianEncoding(fullText);
+      
+      // Apply encoding fix AGAIN after initial cleanup
+      fixedText = this.fixLithuanianEncoding(fixedText);
+      
       console.log('📄 Extracted raw PDF text:', fixedText.substring(0, 500) + '...');
       return fixedText;
     } catch (error) {
@@ -164,48 +168,45 @@ export class TextExtractor {
   }
 
   private static fixLithuanianEncoding(text: string): string {
-    // Apply character replacements carefully
-    let fixed = text;
-    
-    // Fix obvious patterns that are definitely encoding errors (case-insensitive)
-    fixed = fixed
-      // Capital letter patterns
-      .replace(/9([LRTS])/gi, 'V$1')  // 9LUWRV -> VIRTOS, 9luwrv -> Vluwrv
-      .replace(/3([RUL])/gi, 'P$1')   // 3UHN -> PREK
-      
-      // Specific word patterns (case-insensitive where possible)
-      .replace(/9LUWRV/gi, 'Virtos')         // VLUWRV -> Virtos
-      .replace(/VLUWRV/gi, 'Virtos')         // VLUWRV -> Virtos  
-      .replace(/NXNXUǌ]ǐ/gi, 'kukurūzų')     // NXNXUǌ]ǐ -> kukurūzų
-      .replace(/ǌ]ǐ/g, 'ūzų')                // kukurǌ]ǐ -> kukurūzų
-      .replace(/EXUE/gi, 'burb')             // EXUE/burb -> burb
-      .replace(/NXNXUū]ų/gi, 'kukurūzų')     // Partially fixed version
-      .replace(/1X1X8ūzų/gi, 'kukurūzų')     // Another variant
-      
-      // Header/label patterns
-      .replace(/3LUNơMDV/g, 'Pirkėjas')
-      .replace(/7LHNơMDV/g, 'Tiekėjas')
-      .replace(/1DJHYLþLDXV/g, 'Nagevičiaus')
-      .replace(/9LOQLDXV/g, 'Vilniaus')
-      .replace(/9LUãXOLãNLǐ/g, 'Viršuliškių')
-      .replace(/ƲPRQơV/g, 'Įmonės')
-      .replace(/390\u0003PRNơWRMR/g, 'PVM mokėtojo')
-      .replace(/3UHNLǐ\u0012DU\u0012SDVODXJǐ\u0003DSUDã\\PDV/g, 'Prekių ar paslaugų aprašymas')
-      
-      // Character-by-character replacements for mixed case
-      .replace(/NX/g, 'ku')   // N -> k, X -> u
-      .replace(/NU/g, 'ku')   // Alternative pattern
-      .replace(/8U/g, 'ūr')   // 8U -> ūr
-      
-      // Common single character fixes
+    // Don't try to fix ALL text - it will break numbers/prices
+    // Just clean up obvious garbage characters
+    let fixed = text
       .replace(/\u0003/g, ' ')
       .replace(/\uFFFD/g, '')
-      .replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ');
-
-    // Clean up multiple spaces
-    return fixed
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
+    
+    return fixed;
+  }
+
+  // Detect if extracted text is garbled/corrupted
+  private static isTextGarbled(text: string): boolean {
+    // Check for excessive uppercase letter combinations that suggest encoding issues
+    // Real Lithuanian text won't have many sequences like "EDQGHORY", "VLåUås", etc.
+    const suspiciousPatterns = [
+      /[A-Z]{6,}/g,  // 6+ consecutive uppercase letters
+      /[DHLMNRUVWX]{4,}/g,  // Common garbled patterns
+      /\d[A-Z]\d/g,  // Number-Letter-Number patterns (unusual in real text)
+    ];
+    
+    let suspiciousCount = 0;
+    for (const pattern of suspiciousPatterns) {
+      const matches = text.match(pattern);
+      if (matches) {
+        suspiciousCount += matches.length;
+      }
+    }
+    
+    // If more than 20% of text seems garbled, consider it corrupted
+    const ratio = suspiciousCount / Math.max(text.length / 50, 1);
+    const isGarbled = ratio > 0.2;
+    
+    if (isGarbled) {
+      console.warn('🚨 Detected garbled text extraction. Will use OCR fallback.');
+    }
+    
+    return isGarbled;
   }
 
   private static cleanProductName(name: string): string {

@@ -128,6 +128,15 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
     try {
       // Try direct text extraction first
       const extractedText = await TextExtractor.extractTextFromPDF(file);
+      
+      // Check if extracted text is garbled/corrupted (Lidl PDFs have broken text layer)
+      const isGarbled = (TextExtractor as any).isTextGarbled(extractedText);
+      
+      if (isGarbled) {
+        console.warn('🚨 Detected garbled PDF text layer - falling back to OCR');
+        throw new Error('Garbled text extraction - will use OCR fallback');
+      }
+      
       const parsedData = TextExtractor.parseInvoiceFromText(extractedText);
       
       console.log('📝 Direct text extraction results:', {
