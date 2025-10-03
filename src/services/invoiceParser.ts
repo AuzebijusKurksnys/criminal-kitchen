@@ -60,11 +60,29 @@ async function processPDFFile(file: File): Promise<File> {
   return imageFile;
 }
 
+// Fix common OCR errors in Lithuanian text
+function fixOCRErrors(name: string): string {
+  return name
+    // Common OCR mistakes for specific products
+    .replace(/mėzio\s+angl/gi, 'medžio anglys')
+    .replace(/Get\s+red\s+medžio\s+angl/gi, 'Get red medžio anglys')
+    .replace(/Gaz-gazuotis/gi, 'Gazuotas')
+    .replace(/aitriapiprikos/gi, 'aitriųjų paprikų')
+    .replace(/jalapeno\s+aitriapiprikos/gi, 'jalapeño aitriųjų paprikų')
+    // Common character mistakes
+    .replace(/Mės\./gi, 'Mėsainių')
+    .replace(/padazas/gi, 'padažas')
+    .trim();
+}
+
 // Sanitize product names
 function sanitizeProductName(name: string): string {
   if (!name || typeof name !== 'string') return '';
   
-  return name
+  // Fix OCR errors first
+  const fixed = fixOCRErrors(name);
+  
+  return fixed
     .trim()
     .replace(/\s+/g, ' ')
     .replace(/[""]/g, '"')
