@@ -543,8 +543,8 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
                   <div className="flex items-center space-x-3">
                     <span className="text-xl">{expandedSuppliers.has('unassigned') ? '📂' : '📁'}</span>
                     <div className="text-left">
-                      <h3 className="text-lg font-medium text-gray-400">No Preferred Supplier</h3>
-                      <p className="text-sm text-gray-500">{productsBySupplier.unassigned.length} products</p>
+                      <h3 className="text-lg font-medium text-gray-100">UAB "Foodlevel"</h3>
+                      <p className="text-sm text-gray-400">{productsBySupplier.unassigned.length} products</p>
                     </div>
                   </div>
                   <span className="text-gray-400">{expandedSuppliers.has('unassigned') ? '▼' : '▶'}</span>
@@ -556,7 +556,7 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
                       data={productsBySupplier.unassigned}
                       columns={columns}
                       keyExtractor={(product) => product.id}
-                      emptyMessage="No unassigned products"
+                      emptyMessage="No products"
                     />
                   </div>
                 )}
