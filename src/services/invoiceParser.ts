@@ -154,7 +154,7 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
           const computedTotal = Math.round(quantity * unitPrice * 100) / 100;
           const totalPrice = parseNumber(product.totalPrice ?? computedTotal) || computedTotal;
 
-          return {
+          const lineItem = {
             productName: sanitizedName,
             description,
             quantity,
@@ -167,6 +167,9 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
             createdAt: nowIso,
             updatedAt: nowIso
           };
+          
+          console.log(`📋 Line item ${index + 1}:`, lineItem);
+          return lineItem;
         });
 
         const computedLineTotal = lineItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0);

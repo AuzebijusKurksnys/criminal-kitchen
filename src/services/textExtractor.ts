@@ -131,8 +131,10 @@ export class TextExtractor {
         fullText += pageText + '\n\n';
       }
 
-      console.log('📄 Extracted raw PDF text:', fullText.substring(0, 500) + '...');
-      return fullText;
+      // Fix encoding issues before returning
+      const fixedText = this.fixLithuanianEncoding(fullText);
+      console.log('📄 Extracted raw PDF text:', fixedText.substring(0, 500) + '...');
+      return fixedText;
     } catch (error) {
       console.error('PDF text extraction failed:', error);
       throw new Error(`Failed to extract text from PDF: ${error}`);
@@ -161,15 +163,55 @@ export class TextExtractor {
     return Math.round(value * 100) / 100;
   }
 
+  private static fixLithuanianEncoding(text: string): string {
+    // Common character mapping issues in Lidl PDFs
+    const replacements: Record<string, string> = {
+      // Capital letters
+      '9': 'V',  // V often becomes 9
+      '3': 'P',  // P often becomes 3
+      'Ƴ': 'Į',
+      'ơ': 'ė',
+      'ǐ': 'į',
+      'ǌ': 'ū',
+      '\u0003': ' ',
+      '&': 'Š',
+      '$': 'A',
+      // Keep adding more mappings as we discover them
+    };
+
+    // Apply character replacements carefully (only at word boundaries for ambiguous chars)
+    let fixed = text;
+    
+    // Fix obvious patterns that are definitely encoding errors
+    fixed = fixed
+      .replace(/9([LRTS])/g, 'V$1')  // 9LUWRV -> VIRTOS
+      .replace(/3([RUL])/g, 'P$1')   // 3UHN -> PREK
+      .replace(/ǌ]ǐ/g, 'ūzų')        // kukurǌ]ǐ -> kukurūzų
+      .replace(/NXNXUǌ]ǐ/g, 'kukurūzų')
+      .replace(/EXUE/g, 'BURB')
+      .replace(/3LUNơMDV/g, 'Pirkėjas')
+      .replace(/7LHNơMDV/g, 'Tiekėjas')
+      .replace(/1DJHYLþLDXV/g, 'Nagevičiaus')
+      .replace(/9LOQLDXV/g, 'Vilniaus')
+      .replace(/9LUãXOLãNLǐ/g, 'Viršuliškių')
+      .replace(/ƲPRQơV/g, 'Įmonės')
+      .replace(/390\u0003PRNơWRMR/g, 'PVM mokėtojo')
+      .replace(/3UHNLǐ\u0012DU\u0012SDVODXJǐ\u0003DSUDã\\PDV/g, 'Prekių ar paslaugų aprašymas');
+
+    // Clean up
+    return fixed
+      .replace(/\u0003/g, ' ')
+      .replace(/\uFFFD/g, '')
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ')
+      .trim();
+  }
+
   private static cleanProductName(name: string): string {
-    return name
+    const fixed = this.fixLithuanianEncoding(name);
+    return fixed
       .replace(/\s+/g, ' ')
       .replace(/\s+,/g, ',')
       .replace(/\s+\./g, '.')
-      // Remove Unicode replacement characters and other common encoding artifacts
-      .replace(/\u0003/g, ' ')
-      .replace(/\uFFFD/g, '')
-      .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
       .trim();
   }
 
