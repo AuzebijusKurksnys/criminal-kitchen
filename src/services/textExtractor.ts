@@ -406,29 +406,52 @@ export class TextExtractor {
       }
     } else {
       // Single line case (Lidl PDFs) - split on product row patterns
-      // Lidl format: "1 Product Kg. qty price vat sub total 2 NextProduct Vnt. ..."
+      // Lidl format: "Suma 1 Product Kg. qty price vat sub total 2 NextProduct Vnt. ..."
+      // Strategy: Find " <digit> " followed by text, then look for the NEXT " <digit> " to mark the end
       const singleLine = lines.join(' ');
       
-      // Find all occurrences of row numbers followed by product data
-      // Pattern: " <number> <text> <unit> <numbers...>"
-      // Look for: space + digit(s) + space + text + Kg./Vnt./L. etc
-      const productPattern = /\s(\d+)\s+(.+?)\s+(Kg\.|Vnt\.|L\.|ml\.|pcs\.)\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)/gi;
+      // First, find where the product table starts (after "Suma" header column)
+      const tableStartMatch = singleLine.match(/Suma\s+1\s+/i);
+      const startPos = tableStartMatch ? (tableStartMatch.index! + tableStartMatch[0].length - 2) : 0;
       
-      const matches: Array<{ index: number; fullMatch: string }> = [];
+      // Find where products end (before summary section)
+      const summaryMatch = singleLine.match(/Apmokestinama\s+\d+%/i);
+      const endPos = summaryMatch ? summaryMatch.index! : singleLine.length;
+      
+      const productsSection = singleLine.substring(startPos, endPos);
+      
+      // Split on pattern: " <digit><space>" which marks the start of each row
+      // But we need to be smart - look for " 1 ", " 2 ", " 3 " etc at the START of product rows
+      const rowStarts: Array<{ index: number; rowNum: number }> = [];
+      
+      // Find all instances of " <digit> " that could be row markers
+      const rowMarkerPattern = /\s(\d{1,2})\s+/g;
       let match;
       
-      while ((match = productPattern.exec(singleLine)) !== null) {
-        matches.push({ 
-          index: match.index,
-          fullMatch: match[0]
-        });
+      while ((match = rowMarkerPattern.exec(productsSection)) !== null) {
+        const rowNum = parseInt(match[1]);
+        // Only consider as row markers if they're sequential starting from 1
+        if (rowNum >= 1 && rowNum <= 50) {
+          rowStarts.push({ index: match.index, rowNum });
+        }
       }
       
-      console.log(`🔍 Found ${matches.length} product row patterns in single-line PDF`);
+      // Filter to only keep sequential row numbers starting from 1
+      const sequentialRows = rowStarts.filter((r, i) => {
+        if (i === 0) return r.rowNum === 1;
+        return r.rowNum === rowStarts[i - 1].rowNum + 1;
+      });
       
-      // Extract each matched product row
-      for (const m of matches) {
-        rows.push(m.fullMatch.trim());
+      console.log(`🔍 Found ${sequentialRows.length} product rows in single-line PDF`);
+      
+      // Extract text between each row marker
+      for (let i = 0; i < sequentialRows.length; i++) {
+        const start = sequentialRows[i].index;
+        const end = i < sequentialRows.length - 1 ? sequentialRows[i + 1].index : productsSection.length;
+        const rowText = productsSection.substring(start, end).trim();
+        if (rowText) {
+          rows.push(rowText);
+        }
       }
     }
 
