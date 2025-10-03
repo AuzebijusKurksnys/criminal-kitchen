@@ -253,6 +253,14 @@ export function createAzureDocumentIntelligenceService(): AzureDocumentIntellige
 
 // Check if Azure Document Intelligence is available
 export function isAzureDocumentIntelligenceAvailable(): boolean {
-  return !!(import.meta.env.VITE_AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT && 
-           import.meta.env.VITE_AZURE_DOCUMENT_INTELLIGENCE_KEY);
+  const endpoint = import.meta.env.VITE_AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT;
+  const key = import.meta.env.VITE_AZURE_DOCUMENT_INTELLIGENCE_KEY;
+  
+  console.log('🔍 Azure Environment Variables Check:', {
+    endpoint: endpoint ? `SET (${endpoint.substring(0, 30)}...)` : 'NOT SET',
+    key: key ? `SET (${key.substring(0, 10)}...)` : 'NOT SET',
+    available: !!(endpoint && key)
+  });
+  
+  return !!(endpoint && key);
 }
