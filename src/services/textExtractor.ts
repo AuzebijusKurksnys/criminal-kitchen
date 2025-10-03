@@ -166,6 +166,10 @@ export class TextExtractor {
       .replace(/\s+/g, ' ')
       .replace(/\s+,/g, ',')
       .replace(/\s+\./g, '.')
+      // Remove Unicode replacement characters and other common encoding artifacts
+      .replace(/\u0003/g, ' ')
+      .replace(/\uFFFD/g, '')
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
       .trim();
   }
 
@@ -502,6 +506,7 @@ export class TextExtractor {
   private static extractProductTable(text: string): ParsedProduct[] {
     const rows = this.extractTableRows(text);
     const products: ParsedProduct[] = [];
+    const seenProducts = new Set<string>(); // Track unique products
 
     const expandedRows: string[] = [];
     const rowSplitRegex = /(?<=\d{4}-\d{2}-\d{2})\s+(?=\d+\s)/g;
@@ -524,7 +529,14 @@ export class TextExtractor {
     for (const row of expandedRows) {
       const parsed = this.parseProductRow(row);
       if (parsed) {
-        products.push(parsed);
+        // Create a unique key based on product details to avoid duplicates
+        const uniqueKey = `${parsed.productName}-${parsed.quantity}-${parsed.unitPrice}-${parsed.totalPrice}`;
+        if (!seenProducts.has(uniqueKey)) {
+          seenProducts.add(uniqueKey);
+          products.push(parsed);
+        } else {
+          console.log('⚠️ Skipping duplicate product:', parsed.productName);
+        }
       }
     }
 
