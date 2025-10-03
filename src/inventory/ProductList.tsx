@@ -15,8 +15,6 @@ interface ProductListProps {
   loading?: boolean;
 }
 
-type ViewMode = 'list' | 'supplier-groups';
-
 interface ProductWithSupplier extends Product {
   supplierName?: string;
   supplierId?: string;
@@ -29,7 +27,6 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
   const [stockLevelFilter, setStockLevelFilter] = useState('');
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [supplierPrices, setSupplierPrices] = useState<SupplierPrice[]>([]);
   const [expandedSuppliers, setExpandedSuppliers] = useState<Set<string>>(new Set());
@@ -419,7 +416,7 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
           </div>
         </div>
 
-        {/* View mode toggle */}
+        {/* Actions bar */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <div className="text-sm text-gray-400">
@@ -436,59 +433,18 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
             </div>
           </div>
           
-          <div className="flex items-center space-x-2">
-            {selectedProducts.size > 0 && (
-              <button
-                onClick={handleDeleteSelected}
-                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-              >
-                🗑️ Delete Selected ({selectedProducts.size})
-              </button>
-            )}
-            
-            <div className="inline-flex rounded-lg border border-gray-700 bg-gray-800 p-1">
-              <button
-                onClick={() => setViewMode('list')}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  viewMode === 'list'
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-300 hover:text-white'
-                }`}
-              >
-                📋 List View
-              </button>
-              <button
-                onClick={() => setViewMode('supplier-groups')}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  viewMode === 'supplier-groups'
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-300 hover:text-white'
-                }`}
-              >
-                📁 Group by Supplier
-              </button>
-            </div>
-          </div>
+          {selectedProducts.size > 0 && (
+            <button
+              onClick={handleDeleteSelected}
+              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            >
+              🗑️ Delete Selected ({selectedProducts.size})
+            </button>
+          )}
         </div>
 
-        {/* List View */}
-        {viewMode === 'list' && (
-          <Table
-            data={filteredProducts}
-            columns={columns}
-            keyExtractor={(product) => product.id}
-            loading={loading}
-            emptyMessage={
-              searchQuery || unitFilter 
-                ? 'No products match your search criteria'
-                : 'No products found. Create your first product to get started.'
-            }
-          />
-        )}
-
         {/* Supplier Groups View */}
-        {viewMode === 'supplier-groups' && (
-          <div className="space-y-4">
+        <div className="space-y-4">
             <div className="flex justify-end">
               <button
                 onClick={toggleAllSuppliers}
@@ -574,8 +530,7 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
                 No products found. Create your first product to get started.
               </div>
             )}
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Delete confirmation dialog */}
