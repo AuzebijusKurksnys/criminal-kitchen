@@ -69,9 +69,22 @@ export function AdminCleanup() {
         append(`✅ Deleted ${productsCount || 0} products`);
       }
 
+      // Delete suppliers
+      append('Deleting suppliers...');
+      const { error: suppliersError, count: suppliersCount } = await supabase
+        .from('suppliers')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+
+      if (suppliersError) {
+        append(`❌ Error deleting suppliers: ${suppliersError.message}`);
+      } else {
+        append(`✅ Deleted ${suppliersCount || 0} suppliers`);
+      }
+
       append('');
       append('✨ Cleanup complete!');
-      append('All invoices, products, and supplier prices have been deleted.');
+      append('All invoices, products, supplier prices, and suppliers have been deleted.');
       append('You can now start uploading fresh invoices.');
       setDone(true);
     } catch (e) {
@@ -89,7 +102,7 @@ export function AdminCleanup() {
             🗑️ Database Cleanup
           </h1>
           <p className="text-gray-400">
-            This will delete ALL invoices, products, and supplier prices from the database.
+            This will delete ALL invoices, products, supplier prices, and suppliers from the database.
           </p>
           <p className="text-red-400 font-medium mt-2">
             ⚠️ Warning: This action cannot be undone!

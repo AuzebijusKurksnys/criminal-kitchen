@@ -149,14 +149,25 @@ export class AzureDocumentIntelligenceService {
     console.log('📦 Azure Items field:', fields.Items);
     console.log('📋 Full Azure result:', JSON.stringify(azureResult, null, 2));
 
+    // Helper to parse European number format for totals
+    const parseTotal = (value: any): number => {
+      if (typeof value === 'number') return value;
+      if (typeof value === 'string') {
+        const cleaned = value.replace(/\s/g, '').replace(',', '.');
+        const num = parseFloat(cleaned);
+        return isNaN(num) ? 0 : num;
+      }
+      return value || 0;
+    };
+    
     // Transform to our format
     const result: InvoiceProcessingResult = {
       invoice: {
-        invoiceNumber: fields.InvoiceId?.value || `INV-${Date.now()}`,
-        invoiceDate: this.parseDate(fields.InvoiceDate?.value) || new Date().toISOString().split('T')[0],
-        totalExclVat: (fields.SubTotal?.value || 0),
-        totalInclVat: (fields.InvoiceTotal?.value || 0),
-        vatAmount: (fields.TotalTax?.value || 0),
+        invoiceNumber: fields.InvoiceId?.value || fields.InvoiceId?.content || `INV-${Date.now()}`,
+        invoiceDate: this.parseDate(fields.InvoiceDate?.value || fields.InvoiceDate?.content) || new Date().toISOString().split('T')[0],
+        totalExclVat: parseTotal(fields.SubTotal?.value || fields.SubTotal?.content),
+        totalInclVat: parseTotal(fields.InvoiceTotal?.value || fields.InvoiceTotal?.content),
+        vatAmount: parseTotal(fields.TotalTax?.value || fields.TotalTax?.content),
         discountAmount: 0,
         currency: 'EUR', // Azure doesn't always detect currency
         status: 'review' as const,
