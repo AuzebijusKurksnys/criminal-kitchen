@@ -109,7 +109,7 @@ export function InventoryPage() {
       case 'edit':
         return `Edit Product: ${editingProduct?.name}`;
       default:
-        return 'Inventory Management';
+        return 'Stock Management';
     }
   };
 

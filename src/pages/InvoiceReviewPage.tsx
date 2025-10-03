@@ -392,6 +392,13 @@ export function InvoiceReviewPage() {
             const priceExclVat = unitPrice;
             const priceInclVat = unitPrice * (1 + vatRate / 100);
             
+            // Check if this is the first supplier price for this product (make it preferred)
+            const existingPricesForProduct = await listProducts().then(products => {
+              return products.find(p => p.id === productId);
+            });
+            
+            const isFirstSupplier = !existingPricesForProduct || existingPricesForProduct.quantity === (lineItem.quantity || 0);
+            
             await createSupplierPrice({
               productId,
               supplierId: selectedSupplierId,
@@ -400,9 +407,10 @@ export function InvoiceReviewPage() {
               priceInclVat,
               vatRate,
               currency: 'EUR',
-              invoiceId: invoice.id
+              invoiceId: invoice.id,
+              preferred: isFirstSupplier // Mark as preferred if this is the first supplier for this product
             });
-            console.log('Supplier price created');
+            console.log('Supplier price created with preferred:', isFirstSupplier);
           } catch (error) {
             console.warn('Failed to create supplier price:', error);
           }

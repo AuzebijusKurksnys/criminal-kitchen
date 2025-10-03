@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { getRestaurantConfig } from '../data/store';
 
 const navigation = [
-  { name: 'Inventory', href: '/inventory' },
+  { name: 'Stock', href: '/inventory' },
   { name: 'Supplier Prices', href: '/supplier-prices' },
   { name: 'Invoices', href: '/invoices' },
   { name: 'Tech Cards', href: '/tech-cards', badge: 'beta' },

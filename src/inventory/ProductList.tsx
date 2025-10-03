@@ -40,8 +40,8 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
       ]);
       setSuppliers(suppliersData);
       setSupplierPrices(pricesData);
-      // Expand all suppliers by default (including unassigned)
-      setExpandedSuppliers(new Set([...suppliersData.map(s => s.id), 'unassigned']));
+      // Start with all suppliers collapsed
+      setExpandedSuppliers(new Set());
     };
     loadSuppliersAndPrices();
   }, []);
