@@ -475,7 +475,7 @@ export function InvoiceReviewPage() {
                 type="text"
                 value={extractedData.invoice.invoiceNumber || ''}
                 onChange={(e) => handleInvoiceDataChange('invoiceNumber', e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
               />
             </div>
 
@@ -485,7 +485,7 @@ export function InvoiceReviewPage() {
                 type="date"
                 value={extractedData.invoice.invoiceDate || ''}
                 onChange={(e) => handleInvoiceDataChange('invoiceDate', e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
               />
             </div>
 
@@ -497,7 +497,7 @@ export function InvoiceReviewPage() {
                   step="0.01"
                   value={extractedData.invoice.totalExclVat || 0}
                   onChange={(e) => handleInvoiceDataChange('totalExclVat', parseFloat(e.target.value))}
-                  className="mt-1 block w-full rounded-md border-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 />
               </div>
 
@@ -508,7 +508,7 @@ export function InvoiceReviewPage() {
                   step="0.01"
                   value={extractedData.invoice.totalInclVat || 0}
                   onChange={(e) => handleInvoiceDataChange('totalInclVat', parseFloat(e.target.value))}
-                  className="mt-1 block w-full rounded-md border-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 />
               </div>
             </div>
@@ -605,7 +605,7 @@ export function InvoiceReviewPage() {
                           type="text"
                           value={lineItem.productName}
                           onChange={(e) => handleLineItemChange(index, 'productName', e.target.value)}
-                          className="flex-1 border-gray-700 rounded-md text-sm"
+                          className="flex-1 border-gray-700 bg-gray-800 text-gray-100 rounded-md text-sm"
                           placeholder="Product name (edit if OCR is wrong)"
                         />
                         <button
@@ -639,13 +639,13 @@ export function InvoiceReviewPage() {
                         step="0.01"
                         value={lineItem.quantity}
                         onChange={(e) => handleLineItemChange(index, 'quantity', parseFloat(e.target.value))}
-                        className="w-16 border-gray-700 rounded-md text-sm"
+                        className="w-16 border-gray-700 bg-gray-800 text-gray-100 rounded-md text-sm"
                       />
                       <input
                         type="text"
                         value={lineItem.unit}
                         onChange={(e) => handleLineItemChange(index, 'unit', e.target.value)}
-                        className="w-12 border-gray-700 rounded-md text-sm"
+                        className="w-12 border-gray-700 bg-gray-800 text-gray-100 rounded-md text-sm"
                       />
                     </div>
                   </td>
@@ -655,7 +655,7 @@ export function InvoiceReviewPage() {
                       step="0.01"
                       value={lineItem.unitPrice}
                       onChange={(e) => handleLineItemChange(index, 'unitPrice', parseFloat(e.target.value))}
-                      className="w-20 border-gray-700 rounded-md text-sm"
+                      className="w-20 border-gray-700 bg-gray-800 text-gray-100 rounded-md text-sm"
                     />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
