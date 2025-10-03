@@ -349,6 +349,11 @@ export async function findProductMatches(lineItems: Partial<InvoiceLineItem>[]):
 function findSimilarProducts(searchName: string, products: Product[]): ProductMatch[] {
   const normalize = (s: string) => s
     .toLowerCase()
+    // Normalize Lithuanian abbreviations before removing punctuation
+    .replace(/\bšakelėm(is)?\b/g, 'sak')
+    .replace(/\bšak\b\.?/g, 'sak')
+    .replace(/\bbandel(ėmis|es|ės)?\b/g, 'bandel')
+    .replace(/\bsūr(is|ių)?\b/g, 'sur')
     .replace(/[^\p{L}\p{N}\s]/gu, ' ') // remove punctuation
     .replace(/\b(kg|g|l|ml|pcs|piece|pc|vnt|pack|unit|units)\b/g, ' ')
     .replace(/\s+/g, ' ')

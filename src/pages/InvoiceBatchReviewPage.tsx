@@ -375,10 +375,15 @@ export function InvoiceBatchReviewPage() {
                 needsReview: false
               });
 
-              // Create supplier price
+              // Create supplier price with preferred=true for new products
               try {
                 const unitPrice = lineItem.unitPrice || 0;
                 const vatRate = lineItem.vatRate || 21;
+                
+                // Check if this product already has a preferred supplier
+                const existingProduct = products.find(p => p.id === productId);
+                const hasPreferredSupplier = existingProduct ? false : false; // New products never have preferred supplier yet
+                
                 await createSupplierPrice({
                   productId,
                   supplierId: selectedSupplierId,
@@ -387,6 +392,7 @@ export function InvoiceBatchReviewPage() {
                   priceInclVat: unitPrice * (1 + vatRate / 100),
                   vatRate,
                   currency: 'EUR',
+                  preferred: matchingGroup.action === 'create' ? true : hasPreferredSupplier, // Set preferred for new products
                   invoiceId: invoice.id
                 });
               } catch (error) {
