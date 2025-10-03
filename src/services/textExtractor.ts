@@ -344,42 +344,89 @@ export class TextExtractor {
   }
 
   private static extractTableRows(text: string): string[] {
-    const lines = text.split('\n');
-    const rows: string[] = [];
-    let currentRow: string[] = [];
-
-    for (const rawLine of lines) {
-      const line = rawLine.trim();
-      if (!line) {
-        continue;
-      }
-
-      // Stop at various summary/total indicators
-      if (/^Viso\s+be\s+PVM/i.test(line) || 
-          /^Apmokestinama\s+\d+%/i.test(line) ||
-          /^PVM\s+\d+%/i.test(line) ||
-          /^Suma\s+su\s+PVM/i.test(line) ||
-          /^Mokėtina\s+suma/i.test(line) ||
-          /^Apvalinimas/i.test(line) ||
-          /^Kasos\s+aparato/i.test(line)) {
-        if (currentRow.length) {
-          rows.push(currentRow.join(' '));
-        }
-        break;
-      }
-
-      if (/^\d+\s+/.test(line)) {
-        if (currentRow.length) {
-          rows.push(currentRow.join(' '));
-        }
-        currentRow = [line];
-      } else if (currentRow.length) {
-        currentRow.push(line);
-      }
+    // First, try to split the text into meaningful lines
+    // For Lidl invoices, the entire content might be on one line
+    // Split on product row patterns: "1 Product", "2 Product", etc.
+    let textToProcess = text;
+    
+    // Stop at summary section
+    const summaryMatch = text.match(/(Apmokestinama\s+\d+%|PVM\s+\d+%|Kasos\s+aparato)/i);
+    if (summaryMatch && summaryMatch.index) {
+      textToProcess = text.substring(0, summaryMatch.index);
     }
+    
+    // Try to find the start of the product table (after column headers)
+    const tableStartMatch = textToProcess.match(/(?:Nr\.|#)\s+(?:Prekių|Product|Item).*?(?:Suma|Total|Price)/i);
+    if (tableStartMatch && tableStartMatch.index) {
+      textToProcess = textToProcess.substring(tableStartMatch.index + tableStartMatch[0].length);
+    }
+    
+    // Split by line breaks first
+    const lines = textToProcess.split('\n');
+    const rows: string[] = [];
+    
+    // If we have multiple lines, use the old logic
+    if (lines.length > 3) {
+      let currentRow: string[] = [];
 
-    if (currentRow.length) {
-      rows.push(currentRow.join(' '));
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line) {
+          continue;
+        }
+
+        // Stop at various summary/total indicators
+        if (/^Viso\s+be\s+PVM/i.test(line) || 
+            /^Apmokestinama\s+\d+%/i.test(line) ||
+            /^PVM\s+\d+%/i.test(line) ||
+            /^Suma\s+su\s+PVM/i.test(line) ||
+            /^Mokėtina\s+suma/i.test(line) ||
+            /^Apvalinimas/i.test(line) ||
+            /^Kasos\s+aparato/i.test(line)) {
+          if (currentRow.length) {
+            rows.push(currentRow.join(' '));
+          }
+          break;
+        }
+
+        if (/^\d+\s+/.test(line)) {
+          if (currentRow.length) {
+            rows.push(currentRow.join(' '));
+          }
+          currentRow = [line];
+        } else if (currentRow.length) {
+          currentRow.push(line);
+        }
+      }
+
+      if (currentRow.length) {
+        rows.push(currentRow.join(' '));
+      }
+    } else {
+      // Single line case (Lidl PDFs) - split on product row patterns
+      // Look for pattern: " 1 ProductName", " 2 ProductName", etc.
+      // Match line number followed by space and product name
+      const singleLine = lines.join(' ');
+      const productPattern = /\s+(\d+)\s+([A-ZĀČĒĢĪĶĻŅŠŪŽ][^\d]{2,}?)\s+(Kg\.|Vnt\.|L\.|ml\.|pcs\.)/gi;
+      
+      let lastIndex = 0;
+      let match;
+      const matches: { index: number; lineNum: number }[] = [];
+      
+      while ((match = productPattern.exec(singleLine)) !== null) {
+        const lineNum = parseInt(match[1]);
+        matches.push({ index: match.index, lineNum });
+      }
+      
+      // Extract rows between matches
+      for (let i = 0; i < matches.length; i++) {
+        const start = matches[i].index;
+        const end = i < matches.length - 1 ? matches[i + 1].index : singleLine.length;
+        const row = singleLine.substring(start, end).trim();
+        if (row) {
+          rows.push(row);
+        }
+      }
     }
 
     return rows;
