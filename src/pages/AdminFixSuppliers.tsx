@@ -40,8 +40,52 @@ export function AdminFixSuppliers() {
           }
           
           if (!prices || prices.length === 0) {
-            append(`   ⚠️ No supplier prices found - skipping`);
-            skipped++;
+            append(`   ⚠️ No supplier prices found`);
+            
+            // Try to find which supplier this product came from via invoices
+            const { data: lineItems } = await supabase
+              .from('invoice_line_items')
+              .select('invoice_id, invoices(supplier_id, suppliers(name))')
+              .eq('product_id', product.id)
+              .limit(1);
+            
+            if (lineItems && lineItems.length > 0) {
+              const invoice = (lineItems[0] as any).invoices;
+              const supplierId = invoice?.supplier_id;
+              const supplierName = invoice?.suppliers?.name;
+              
+              if (supplierId) {
+                append(`   🔍 Found supplier from invoice: ${supplierName}`);
+                append(`   🔧 Creating supplier price and marking as preferred...`);
+                
+                // Create a supplier price entry (we don't have price data, so use 0)
+                const { error: insertError } = await supabase
+                  .from('supplier_prices')
+                  .insert({
+                    product_id: product.id,
+                    supplier_id: supplierId,
+                    price: 0,
+                    price_excl_vat: 0,
+                    price_incl_vat: 0,
+                    vat_rate: 21,
+                    currency: 'EUR',
+                    preferred: true
+                  });
+                
+                if (!insertError) {
+                  append(`   ✅ Created supplier price for ${supplierName}`);
+                  fixed++;
+                } else {
+                  append(`   ❌ Failed to create supplier price: ${insertError.message}`);
+                }
+              } else {
+                append(`   ⚠️ Could not find supplier - skipping`);
+                skipped++;
+              }
+            } else {
+              append(`   ⚠️ No invoice history found - skipping`);
+              skipped++;
+            }
             continue;
           }
           
