@@ -114,7 +114,7 @@ export class AzureDocumentIntelligenceService {
 
   private async pollForResults(operationLocation: string): Promise<AzureAnalysisResult> {
     const maxAttempts = 30; // 5 minutes max
-    const pollInterval = 10000; // 10 seconds
+    const pollInterval = 2000; // 2 seconds (faster polling)
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const response = await fetch(operationLocation, {
@@ -135,8 +135,9 @@ export class AzureDocumentIntelligenceService {
         throw new Error('Azure Document Intelligence analysis failed');
       }
 
-      // Wait before next poll
-      await new Promise(resolve => setTimeout(resolve, pollInterval));
+      // Use exponential backoff: start fast, slow down later
+      const backoffDelay = Math.min(pollInterval * Math.pow(1.5, attempt), 10000);
+      await new Promise(resolve => setTimeout(resolve, backoffDelay));
     }
 
     throw new Error('Azure Document Intelligence analysis timed out');
