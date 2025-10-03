@@ -239,34 +239,62 @@ export class TextExtractor {
   }
 
   private static extractInvoiceNumber(text: string): string | undefined {
-    const match = text.match(/FL\d+/i);
-    return match ? match[0] : undefined;
+    // Try Foodlevel format
+    let match = text.match(/FL\d+/i);
+    if (match) return match[0];
+    
+    // Try Lidl format (e.g., "25-0149990811003")
+    match = text.match(/\d{2}-\d{13}/);
+    if (match) return match[0];
+    
+    return undefined;
   }
 
   private static extractInvoiceDate(text: string): string | undefined {
-    const dateMatch = text.match(/(\d{4})\.m\.\s*([^\s\d]+)\s*(\d{1,2})d\./i);
-    if (!dateMatch) {
-      return undefined;
+    // Try Foodlevel format first
+    let dateMatch = text.match(/(\d{4})\.m\.\s*([^\s\d]+)\s*(\d{1,2})d\./i);
+    if (dateMatch) {
+      const [, year, monthWord, dayRaw] = dateMatch;
+      const month = this.normalizeMonth(monthWord);
+      if (month) {
+        const day = dayRaw.padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
     }
-    const [, year, monthWord, dayRaw] = dateMatch;
-    const month = this.normalizeMonth(monthWord);
-    if (!month) {
-      return undefined;
+    
+    // Try Lidl format (e.g., "Data 2025-08-11")
+    dateMatch = text.match(/Data\s+(\d{4}-\d{2}-\d{2})/i);
+    if (dateMatch) {
+      return dateMatch[1];
     }
-    const day = dayRaw.padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    
+    // Try generic date format YYYY-MM-DD
+    dateMatch = text.match(/(\d{4}-\d{2}-\d{2})/);
+    if (dateMatch) {
+      return dateMatch[1];
+    }
+    
+    return undefined;
   }
 
   private static extractSupplierName(text: string): string | undefined {
-    const supplierMatch = text.match(/Tiek[ėe]jas:\s*([^\n]+)/i);
-    if (!supplierMatch) {
-      return undefined;
+    // Try Foodlevel format first
+    let supplierMatch = text.match(/Tiek[ėe]jas:\s*([^\n]+)/i);
+    if (supplierMatch) {
+      const raw = supplierMatch[1]
+        .split(/PVM|Juridi|Bankas|Gavėjas/)[0]
+        .replace(/\s{2,}.*/, '')
+        .trim();
+      return raw || undefined;
     }
-    const raw = supplierMatch[1]
-      .split(/PVM|Juridi|Bankas|Gavėjas/)[0]
-      .replace(/\s{2,}.*/, '')
-      .trim();
-    return raw || undefined;
+    
+    // Try Lidl format - look for "UAB" followed by company name
+    supplierMatch = text.match(/UAB\s+([^\n\r]+?)(?:\s+Adresas|$)/i);
+    if (supplierMatch) {
+      return `UAB ${supplierMatch[1].trim()}`;
+    }
+    
+    return undefined;
   }
 
   private static extractTableRows(text: string): string[] {
@@ -322,7 +350,7 @@ export class TextExtractor {
     }
     
     // Skip if remainder is too short to be a real product
-    if (remainder.length < 10) {
+    if (remainder.length < 5) {
       return undefined;
     }
 
@@ -337,17 +365,24 @@ export class TextExtractor {
       remainder = remainder.slice(0, expiryMatch.index).trim();
     }
 
-    // Try three patterns to handle different invoice formats:
-    // Pattern 1: name ... quantity unit unitPrice subtotal discount total (full format with explicit discount)
-    // Pattern 2: name ... quantity unit unitPrice subtotal total (optional discount between subtotal and total)
-    // Pattern 3: name ... quantity unit unitPrice total (simplest format - no subtotal/discount)
+    // Try multiple patterns to handle different invoice formats:
+    // Pattern Lidl: name unit quantity unitPrice vatRate subtotal total (Lidl format: name Kg. 4,61 0,8182 21,00 3,7686 4,56)
+    // Pattern 1: name quantity unit unitPrice subtotal discount total (full format with explicit discount)
+    // Pattern 2: name quantity unit unitPrice subtotal total (optional discount between subtotal and total)
+    // Pattern 3: name quantity unit unitPrice total (simplest format - no subtotal/discount)
     
+    const tailPatternLidl = /^(.+?)\s+(kg|vnt|pcs|l|ml)[.,]?\s+(\d+[.,]?\d*)\s+(\d+[.,]?\d*)\s+(\d+[.,]?\d*)\s+(\d+[.,]?\d*)\s+(\d+[.,]?\d*)$/iu;
     const tailPatternFull = /^(.+?)\s+(\d+[.,]?\d*)\s+(kg|vnt|pcs|l|ml)\s+(\d+[.,]?\d*)\s+(\d+[.,]?\d*)\s+(\d+[.,]?\d*)\s+(\d+[.,]?\d*)$/iu;
     const tailPatternWithOptionalDiscount = /^(.+?)\s+(\d+[.,]?\d*)\s+(kg|vnt|pcs|l|ml)\s+(\d+[.,]?\d*)\s+(\d+[.,]?\d*)(?:\s+(\d+[.,]?\d*))?\s+(\d+[.,]?\d*)$/iu;
     const tailPatternSimple = /^(.+?)\s+(\d+[.,]?\d*)\s+(kg|vnt|pcs|l|ml)\s+(\d+[.,]?\d*)\s+(\d+[.,]?\d*)$/iu;
     
-    let match = remainder.match(tailPatternFull);
-    let formatType: 'full' | 'optional' | 'simple' = 'full';
+    let match = remainder.match(tailPatternLidl);
+    let formatType: 'lidl' | 'full' | 'optional' | 'simple' = 'lidl';
+    
+    if (!match) {
+      match = remainder.match(tailPatternFull);
+      formatType = 'full';
+    }
     
     if (!match) {
       match = remainder.match(tailPatternWithOptionalDiscount);
@@ -364,9 +399,13 @@ export class TextExtractor {
       return undefined;
     }
 
-    let leadingText, quantityStr, unitStr, unitPriceStr, subtotalStr, discountStr, totalStr;
+    let leadingText, quantityStr, unitStr, unitPriceStr, subtotalStr, discountStr, totalStr, vatRateStr;
     
-    if (formatType === 'full') {
+    if (formatType === 'lidl') {
+      // Lidl format: name unit quantity unitPrice vatRate subtotal total
+      [, leadingText, unitStr, quantityStr, unitPriceStr, vatRateStr, subtotalStr, totalStr] = match;
+      discountStr = undefined;
+    } else if (formatType === 'full') {
       // Full format: name quantity unit unitPrice subtotal discount total
       [, leadingText, quantityStr, unitStr, unitPriceStr, subtotalStr, discountStr, totalStr] = match;
     } else if (formatType === 'optional') {
@@ -412,16 +451,19 @@ export class TextExtractor {
       .trim();
 
     // Skip products with nonsensical/incomplete names
-    if (productName.length < 15) {
+    if (productName.length < 3) {
       console.warn('⚠️ Product name too short, likely incomplete:', productName);
       return undefined;
     }
     
-    // Skip if product starts with common incomplete phrases
-    if (/^(su perpjautu|su |ir |be |per |prie )/i.test(productName)) {
+    // Skip if product starts with common incomplete phrases (only for longer names)
+    if (productName.length >= 15 && /^(su perpjautu|su |ir |be |per |prie )/i.test(productName)) {
       console.warn('⚠️ Product name starts with incomplete phrase:', productName);
       return undefined;
     }
+
+    // Parse VAT rate from Lidl format or use default
+    const vatRate = vatRateStr ? this.parseNumber(vatRateStr) : 21;
 
     const parsedProduct: ParsedProduct = {
       productName,
@@ -432,7 +474,7 @@ export class TextExtractor {
       totalBeforeDiscount: this.round(subtotal),
       discountAmount: this.round(discount),
       totalPrice: this.round(total),
-      vatRate: 21,
+      vatRate: vatRate,
       expiryDate
     };
 
