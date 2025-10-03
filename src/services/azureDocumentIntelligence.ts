@@ -14,25 +14,26 @@ interface AzureAnalysisResult {
     documents: Array<{
       docType: string;
       fields: {
-        VendorName?: { value: string };
-        VendorAddress?: { value: string };
-        InvoiceId?: { value: string };
-        InvoiceDate?: { value: string };
-        DueDate?: { value: string };
-        InvoiceTotal?: { value: number };
-        AmountDue?: { value: number };
-        SubTotal?: { value: number };
-        TotalTax?: { value: number };
+        VendorName?: { value?: string; content?: string };
+        VendorAddress?: { value?: string; content?: string };
+        InvoiceId?: { value?: string; content?: string };
+        InvoiceDate?: { value?: string; content?: string };
+        DueDate?: { value?: string; content?: string };
+        InvoiceTotal?: { value?: number; content?: string };
+        AmountDue?: { value?: number; content?: string };
+        SubTotal?: { value?: number; content?: string };
+        TotalTax?: { value?: number; content?: string };
         Items?: {
-          values: Array<{
+          values?: Array<{
             properties: {
-              Description?: { value: string };
-              Quantity?: { value: number };
-              Unit?: { value: string };
-              UnitPrice?: { value: number };
-              Amount?: { value: number };
+              Description?: { value?: string; content?: string };
+              Quantity?: { value?: number; content?: string };
+              Unit?: { value?: string; content?: string };
+              UnitPrice?: { value?: number; content?: string };
+              Amount?: { value?: number; content?: string };
             };
           }>;
+          valueArray?: Array<any>;
         };
       };
     }>;
