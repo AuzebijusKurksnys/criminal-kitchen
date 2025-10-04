@@ -18,7 +18,7 @@ import {
 } from '../data/store';
 import { findProductMatches } from '../services/invoiceParser';
 import { findMatchingSupplier, cleanSupplierName } from '../utils/supplierNameUtils';
-import { checkForDuplicateInvoice } from '../utils/invoiceDuplicateHandler';
+import { checkForDuplicateInvoice, mergeInvoices, MergeOptions } from '../utils/invoiceDuplicateHandler';
 import { DuplicateInvoiceDialog } from '../components/DuplicateInvoiceDialog';
 import type { 
   InvoiceProcessingResult, 
@@ -212,18 +212,136 @@ export function InvoiceReviewPage() {
     }
   };
 
-  const handleMergeInvoice = async (options: any) => {
-    console.log('🔄 Merging duplicate invoice with options:', options);
+  const handleMergeInvoice = async (options: MergeOptions) => {
+    if (!duplicateInfo || !extractedData || !selectedSupplierId) {
+      showToast('error', 'Missing data for merge operation.');
+      return;
+    }
+
+    setIsProcessing(true);
     setShowDuplicateDialog(false);
-    // TODO: Implement merge logic
-    showToast('info', 'Merge functionality will be implemented in the next update');
+
+    try {
+      const existingInvoice = (duplicateInfo as any).existing;
+      const existingLineItems = (duplicateInfo as any).existingLineItems;
+      const newInvoicePartial = extractedData.invoice;
+      const newLineItems = extractedData.lineItems;
+
+      const { updatedInvoice, updatedLineItems } = await mergeInvoices(
+        existingInvoice,
+        existingLineItems,
+        newLineItems,
+        newInvoicePartial,
+        options
+      );
+
+      // 1. Update the existing invoice in the database
+      await updateInvoice(updatedInvoice.id, {
+        total_excl_vat: updatedInvoice.totalExclVat,
+        total_incl_vat: updatedInvoice.totalInclVat,
+        vat_amount: updatedInvoice.vatAmount,
+        file_path: updatedInvoice.filePath,
+        updated_at: updatedInvoice.updatedAt,
+      });
+
+      // 2. Update/Create line items
+      const existingLineItemIds = new Set(existingLineItems.map(item => item.id));
+
+      for (const item of updatedLineItems) {
+        if (item.id && existingLineItemIds.has(item.id)) {
+          // Update existing line item
+          await updateInvoiceLineItem(item.id, {
+            product_id: item.productId,
+            product_name: item.productName,
+            description: item.description,
+            quantity: item.quantity,
+            unit: item.unit,
+            unit_price: item.unitPrice,
+            total_price: item.totalPrice,
+            vat_rate: item.vatRate,
+            updated_at: item.updatedAt,
+          });
+        } else {
+          // Create new line item
+          await createInvoiceLineItem({
+            invoice_id: existingInvoice.id,
+            product_id: item.productId,
+            product_name: item.productName,
+            description: item.description,
+            quantity: item.quantity,
+            unit: item.unit,
+            unit_price: item.unitPrice,
+            total_price: item.totalPrice,
+            vat_rate: item.vatRate,
+          });
+        }
+      }
+
+      showToast('success', `Invoice ${existingInvoice.invoiceNumber} merged successfully!`);
+      navigate('/invoices');
+    } catch (error) {
+      console.error('Error merging invoice:', error);
+      showToast('error', 'Failed to merge invoice.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleReplaceInvoice = async () => {
-    console.log('🔄 Replacing duplicate invoice');
+    if (!duplicateInfo || !extractedData || !selectedSupplierId) {
+      showToast('error', 'Missing data for replace operation.');
+      return;
+    }
+
+    setIsProcessing(true);
     setShowDuplicateDialog(false);
-    // TODO: Implement replace logic
-    showToast('info', 'Replace functionality will be implemented in the next update');
+
+    try {
+      const existingInvoice = (duplicateInfo as any).existing;
+      
+      // 1. Delete existing line items
+      const existingLineItems = await getInvoiceLineItems(existingInvoice.id);
+      for (const item of existingLineItems) {
+        await deleteInvoiceLineItem(item.id);
+      }
+
+      // 2. Delete the existing invoice
+      await deleteInvoice(existingInvoice.id);
+
+      // 3. Create the new invoice and its line items
+      const newInvoiceId = await createInvoice({
+        supplier_id: selectedSupplierId,
+        invoice_number: extractedData.invoice.invoiceNumber!,
+        invoice_date: extractedData.invoice.invoiceDate!,
+        total_excl_vat: extractedData.invoice.totalExclVat!,
+        total_incl_vat: extractedData.invoice.totalInclVat!,
+        vat_amount: extractedData.invoice.vatAmount!,
+        status: 'pending',
+        file_path: extractedData.invoice.filePath,
+      });
+
+      for (const item of extractedData.lineItems) {
+        await createInvoiceLineItem({
+          invoice_id: newInvoiceId,
+          product_id: item.productId,
+          product_name: item.productName!,
+          description: item.description,
+          quantity: item.quantity!,
+          unit: item.unit!,
+          unit_price: item.unitPrice!,
+          total_price: item.totalPrice!,
+          vat_rate: item.vatRate,
+        });
+      }
+
+      showToast('success', `Invoice ${extractedData.invoice.invoiceNumber} replaced successfully!`);
+      navigate('/invoices');
+    } catch (error) {
+      console.error('Error replacing invoice:', error);
+      showToast('error', 'Failed to replace invoice.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleCancelUpload = () => {

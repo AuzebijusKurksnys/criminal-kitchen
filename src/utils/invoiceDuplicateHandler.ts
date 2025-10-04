@@ -115,3 +115,89 @@ export function generateMergePreview(
     comparisons
   };
 }
+
+export interface MergeOptions {
+  mergeLineItems: boolean;
+  updateTotals: boolean;
+  keepExistingFile: boolean;
+}
+
+export async function mergeInvoices(
+  existingInvoice: Invoice,
+  existingLineItems: InvoiceLineItem[],
+  newLineItems: Partial<InvoiceLineItem>[],
+  newInvoicePartial: Partial<Invoice>,
+  options: MergeOptions
+): Promise<{ updatedInvoice: Invoice; updatedLineItems: InvoiceLineItem[] }> {
+  let updatedInvoice = { ...existingInvoice };
+  let updatedLineItems: InvoiceLineItem[] = [...existingLineItems];
+
+  if (options.mergeLineItems) {
+    const existingMap = new Map<string, InvoiceLineItem>();
+    updatedLineItems.forEach(item => {
+      existingMap.set(normalizeProductName(item.productName), item);
+    });
+
+    for (const newItem of newLineItems) {
+      if (!newItem.productName || newItem.quantity === undefined || newItem.unitPrice === undefined) {
+        continue;
+      }
+
+      const normalizedName = normalizeProductName(newItem.productName);
+      const existingItem = existingMap.get(normalizedName);
+
+      if (existingItem) {
+        // Merge quantities and recalculate total price
+        existingItem.quantity += newItem.quantity;
+        existingItem.totalPrice = (existingItem.totalPrice || 0) + (newItem.totalPrice || (newItem.quantity * newItem.unitPrice));
+        existingItem.unitPrice = existingItem.quantity > 0 ? existingItem.totalPrice / existingItem.quantity : 0;
+        if (newItem.description && !existingItem.description) existingItem.description = newItem.description;
+        if (newItem.vatRate !== undefined && existingItem.vatRate === undefined) existingItem.vatRate = newItem.vatRate;
+      } else {
+        // Add new line item
+        updatedLineItems.push({
+          ...newItem,
+          id: `new-${Date.now()}-${Math.random()}`,
+          invoiceId: existingInvoice.id,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          productName: newItem.productName,
+          quantity: newItem.quantity,
+          unit: newItem.unit || 'pcs',
+          unitPrice: newItem.unitPrice,
+          totalPrice: newItem.totalPrice || (newItem.quantity * newItem.unitPrice),
+          vatRate: newItem.vatRate || 0,
+        } as InvoiceLineItem);
+      }
+    }
+  }
+
+  if (options.updateTotals) {
+    let newTotalExclVat = 0;
+    let newTotalInclVat = 0;
+    let newVatAmount = 0;
+
+    for (const item of updatedLineItems) {
+      const itemTotalExclVat = item.totalPrice;
+      const itemVatRate = item.vatRate !== undefined ? item.vatRate : updatedInvoice.vatAmount;
+      const itemVatAmount = itemTotalExclVat * (itemVatRate / 100);
+      const itemTotalInclVat = itemTotalExclVat + itemVatAmount;
+
+      newTotalExclVat += itemTotalExclVat;
+      newVatAmount += itemVatAmount;
+      newTotalInclVat += itemTotalInclVat;
+    }
+
+    updatedInvoice.totalExclVat = newTotalExclVat;
+    updatedInvoice.vatAmount = newVatAmount;
+    updatedInvoice.totalInclVat = newTotalInclVat;
+  }
+
+  if (!options.keepExistingFile && newInvoicePartial.filePath) {
+    updatedInvoice.filePath = newInvoicePartial.filePath;
+  }
+
+  updatedInvoice.updatedAt = new Date().toISOString();
+
+  return { updatedInvoice, updatedLineItems };
+}
