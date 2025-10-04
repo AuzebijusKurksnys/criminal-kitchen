@@ -23,7 +23,7 @@ export function UnifiedInvoiceUpload({ className = '' }: UnifiedInvoiceUploadPro
       // Check if file already exists
       const exists = prev.some(f => f.name === file.name && f.size === file.size);
       if (exists) {
-        showToast('warning', 'File already selected');
+        showToast('info', 'File already selected');
         return prev;
       }
       return [...prev, file];

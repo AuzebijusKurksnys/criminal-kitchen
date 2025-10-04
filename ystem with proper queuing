@@ -1,0 +1,17 @@
+[33mcommit 2a7f4a668d193eff6b96f261a935efc89b7fdc39[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: User <user@local>
+Date:   Sat Oct 4 12:34:12 2025 +0300
+
+    Fix Azure rate limiting issues with global rate limiter and improved retry logic
+    
+    - Added AzureRateLimiter singleton class to queue and throttle all Azure requests
+    - Increased retry attempts from 3 to 5 for better resilience
+    - Implemented exponential backoff with jitter for rate limit errors (up to 30s)
+    - Added shorter backoff for other errors (up to 5s)
+    - Improved error messages to include response text
+    - Increased wait time between models from 5s to 10s for rate limit errors
+    - Global rate limiter ensures minimum 2s between all Azure requests
+    - This should resolve the 429 errors during batch processing
+
+ src/services/azureDocumentIntelligence.ts | 137 [32m+++++++++++++++++++++++[m[31m-------[m
+ 1 file changed, 106 insertions(+), 31 deletions(-)
