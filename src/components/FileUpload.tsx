@@ -57,10 +57,11 @@ export function FileUpload({
   };
 
   const handleMultipleFiles = (files: File[]) => {
-    if (files.length > maxFiles) {
-      setError(`Maximum ${maxFiles} files allowed. Selected ${files.length} files.`);
-      return;
-    }
+    // Allow unlimited files - they will be processed sequentially
+    // if (files.length > maxFiles) {
+    //   setError(`Maximum ${maxFiles} files allowed. Selected ${files.length} files.`);
+    //   return;
+    // }
 
     const validFiles: File[] = [];
     const errors: string[] = [];

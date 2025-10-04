@@ -135,8 +135,8 @@ export function UnifiedInvoiceUpload({ className = '' }: UnifiedInvoiceUploadPro
             Upload Invoice{selectedFiles.length > 1 ? 's' : ''}
           </h2>
           <p className="mt-1 text-sm text-gray-400">
-            Upload one or more invoice files (JPG, PNG, GIF, WebP, or PDF format)
-            {selectedFiles.length > 1 && ' - Files will be processed sequentially to avoid rate limits'}
+            Upload invoice files (JPG, PNG, GIF, WebP, or PDF format) - No file limit, processed sequentially
+            {selectedFiles.length > 1 && ' - Files will be processed one by one to avoid rate limits'}
           </p>
         </div>
 
@@ -147,6 +147,7 @@ export function UnifiedInvoiceUpload({ className = '' }: UnifiedInvoiceUploadPro
               accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
               maxSize={10 * 1024 * 1024} // 10MB
               multiple={true}
+              maxFiles={999999} // Effectively unlimited - process sequentially
             />
           ) : (
             <div className="space-y-4">
