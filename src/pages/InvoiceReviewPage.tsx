@@ -17,7 +17,7 @@ import {
   checkInvoiceExists
 } from '../data/store';
 import { findProductMatches } from '../services/invoiceParser';
-import { findMatchingSupplier } from '../utils/supplierNameUtils';
+import { findMatchingSupplier, cleanSupplierName } from '../utils/supplierNameUtils';
 import type { 
   InvoiceProcessingResult, 
   Supplier, 
@@ -55,8 +55,17 @@ export function InvoiceReviewPage() {
       return;
     }
 
-    setExtractedData(state.extractedData);
-    setEditedData(state.extractedData); // Initialize edited data
+    // Clean the supplier name in the extracted data
+    const cleanedData = {
+      ...state.extractedData,
+      supplierInfo: state.extractedData.supplierInfo ? {
+        ...state.extractedData.supplierInfo,
+        name: cleanSupplierName(state.extractedData.supplierInfo.name) || state.extractedData.supplierInfo.name
+      } : undefined
+    };
+    
+    setExtractedData(cleanedData);
+    setEditedData(cleanedData); // Initialize edited data
     setFile(state.file);
 
     // Simple sanity check: warn if extracted invoice number does not appear in filename
@@ -90,6 +99,12 @@ export function InvoiceReviewPage() {
 
       // Auto-select supplier if name matches using smart matching
       if (state?.extractedData?.supplierInfo?.name) {
+        console.log('🔍 Debugging supplier matching:', {
+          extractedName: state.extractedData.supplierInfo.name,
+          availableSuppliers: suppliersData.map(s => s.name),
+          extractedData: state.extractedData.supplierInfo
+        });
+        
         const matchingSupplier = findMatchingSupplier(
           state.extractedData.supplierInfo.name,
           suppliersData
@@ -99,6 +114,7 @@ export function InvoiceReviewPage() {
           console.log('✅ Auto-selected supplier:', matchingSupplier.name);
         } else {
           console.log('❌ No matching supplier found for:', state.extractedData.supplierInfo.name);
+          console.log('🔍 Available suppliers:', suppliersData.map(s => s.name));
         }
       }
     } catch (error) {
@@ -540,7 +556,7 @@ export function InvoiceReviewPage() {
                     onClick={handleCreateNewSupplier}
                     className="px-3 py-2 border border-green-500 text-green-400 rounded-md text-sm hover:bg-green-900/20 bg-green-900/10"
                   >
-                    Create "{extractedData.supplierInfo.name}"
+                    Create "{cleanSupplierName(extractedData.supplierInfo.name)}"
                   </button>
                 )}
               </div>

@@ -43,13 +43,26 @@ export function findMatchingSupplier(
   extractedSupplierName: string, 
   existingSuppliers: Array<{ id: string; name: string }>
 ): { id: string; name: string } | null {
+  console.log('🔍 findMatchingSupplier called with:', {
+    extracted: extractedSupplierName,
+    existing: existingSuppliers.map(s => s.name)
+  });
+  
   const normalizedExtracted = normalizeSupplierNameForMatching(extractedSupplierName);
+  
+  console.log('🧹 Normalized extracted name:', normalizedExtracted);
   
   if (!normalizedExtracted) return null;
   
   // Try exact match first
   for (const supplier of existingSuppliers) {
     const normalizedExisting = normalizeSupplierNameForMatching(supplier.name);
+    console.log('🔍 Comparing:', { 
+      extracted: normalizedExtracted, 
+      existing: normalizedExisting,
+      match: normalizedExtracted === normalizedExisting
+    });
+    
     if (normalizedExtracted === normalizedExisting) {
       console.log('🎯 Exact supplier match found:', { extracted: extractedSupplierName, existing: supplier.name });
       return supplier;
@@ -59,7 +72,17 @@ export function findMatchingSupplier(
   // Try partial matches (one contains the other)
   for (const supplier of existingSuppliers) {
     const normalizedExisting = normalizeSupplierNameForMatching(supplier.name);
-    if (normalizedExtracted.includes(normalizedExisting) || normalizedExisting.includes(normalizedExtracted)) {
+    const extractedContainsExisting = normalizedExtracted.includes(normalizedExisting);
+    const existingContainsExtracted = normalizedExisting.includes(normalizedExtracted);
+    
+    console.log('🔍 Partial match check:', { 
+      extracted: normalizedExtracted, 
+      existing: normalizedExisting,
+      extractedContainsExisting,
+      existingContainsExtracted
+    });
+    
+    if (extractedContainsExisting || existingContainsExtracted) {
       console.log('🎯 Partial supplier match found:', { extracted: extractedSupplierName, existing: supplier.name });
       return supplier;
     }
