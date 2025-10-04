@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import type { InvoiceLineItem, InvoiceProcessingResult, Product, ProductMatch } from '../data/types';
 import { listProducts } from '../data/store';
 import { createAzureDocumentIntelligenceService, isAzureDocumentIntelligenceAvailable } from './azureDocumentIntelligence';
-import { openaiInvoiceProcessor, isOpenAIAvailable } from './openaiModels';
+// OpenAI fallback removed - Azure handles all OCR with retry logic
 import { pdfProcessor } from './pdfProcessor';
 import PDFProcessor from './pdfProcessor';
 import { TextExtractor } from './textExtractor';
@@ -291,35 +291,13 @@ export async function extractInvoiceData(file: File): Promise<InvoiceProcessingR
         };
       }
     } catch (error) {
-      console.warn('Azure Document Intelligence failed, falling back to OpenAI:', error);
+      console.error('❌ Azure Document Intelligence failed after all retry attempts:', error);
       processingInfo.azureError = error instanceof Error ? error.message : 'Unknown error';
     }
   }
 
-  // Fallback to OpenAI Multi-Model System
-  if (!isOpenAIAvailable()) {
-    throw new Error('No OCR service configured. Please set VITE_OPENAI_API_KEY or VITE_AZURE_DOCUMENT_INTELLIGENCE_* environment variables.');
-  }
-
-  console.log('🟡 Using OpenAI Multi-Model System for OCR');
-  
-  try {
-    const { result, modelUsed, attempts } = await openaiInvoiceProcessor.processInvoiceWithFallback(processedFile);
-    result.matches = await findProductMatches(result.lineItems);
-
-    return {
-      ...result,
-        processingInfo: {
-          service: 'OpenAI',
-          model: modelUsed,
-          attempts,
-          ...processingInfo
-        }
-    };
-  } catch (error) {
-    console.error('All OCR services failed:', error);
-    throw new Error(`OCR processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
+  // No fallback - Azure should handle all errors with retry logic
+  throw new Error(`Azure Document Intelligence failed to process invoice: ${processingInfo.azureError || 'Unknown error'}`);
 }
 
 // Find matching products for invoice line items

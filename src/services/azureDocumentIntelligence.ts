@@ -53,7 +53,7 @@ export class AzureDocumentIntelligenceService {
     this.config = config;
   }
 
-  // Try multiple Azure models with intelligent fallback
+  // Try multiple Azure models with intelligent fallback and retry logic
   async analyzeInvoice(file: File): Promise<InvoiceProcessingResult> {
     const models = [
       'prebuilt-invoice',      // Specialized invoice model (best for standard invoices)
@@ -66,15 +66,47 @@ export class AzureDocumentIntelligenceService {
     for (const model of models) {
       try {
         console.log(`🔵 Trying Azure model: ${model}`);
-        return await this.analyzeWithModel(file, model);
+        return await this.analyzeWithRetry(file, model);
       } catch (error) {
         console.warn(`❌ Azure model ${model} failed:`, error);
         lastError = error as Error;
-        // Try next model
+        
+        // If it's a rate limit error, wait and retry
+        if (error instanceof Error && error.message.includes('429')) {
+          console.log('⏳ Rate limit hit, waiting 5 seconds before trying next model...');
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        }
       }
     }
 
     throw lastError || new Error('All Azure models failed');
+  }
+
+  private async analyzeWithRetry(file: File, model: string, maxRetries: number = 3): Promise<InvoiceProcessingResult> {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 Azure ${model} attempt ${attempt}/${maxRetries}`);
+        return await this.analyzeWithModel(file, model);
+      } catch (error) {
+        console.warn(`❌ Azure ${model} attempt ${attempt} failed:`, error);
+        
+        if (attempt === maxRetries) {
+          throw error;
+        }
+        
+        // If it's a rate limit error, wait longer before retrying
+        if (error instanceof Error && error.message.includes('429')) {
+          const waitTime = attempt * 2000; // 2s, 4s, 6s
+          console.log(`⏳ Rate limit hit, waiting ${waitTime}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        } else {
+          // For other errors, wait briefly before retry
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    }
+    
+    throw new Error(`Azure ${model} failed after ${maxRetries} attempts`);
   }
 
   private async analyzeWithModel(file: File, model: string): Promise<InvoiceProcessingResult> {
