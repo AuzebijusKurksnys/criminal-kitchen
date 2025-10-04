@@ -52,7 +52,7 @@ export interface LineItemComparison {
 
 export function compareLineItems(
   existingLineItems: InvoiceLineItem[],
-  newLineItems: InvoiceLineItem[]
+  newLineItems: Partial<InvoiceLineItem>[]
 ): LineItemComparison[] {
   const comparisons: LineItemComparison[] = [];
   
@@ -65,13 +65,15 @@ export function compareLineItems(
   
   // Compare with new line items
   newLineItems.forEach(newItem => {
+    if (!newItem.productName) return;
+    
     const normalizedName = normalizeProductName(newItem.productName);
     const existingItem = existingMap.get(normalizedName);
     
-    if (existingItem) {
+    if (existingItem && newItem.quantity !== undefined && newItem.unitPrice !== undefined) {
       comparisons.push({
         existing: existingItem,
-        new: newItem,
+        new: newItem as InvoiceLineItem,
         isDuplicate: true,
         action: newItem.quantity === existingItem.quantity && 
                 newItem.unitPrice === existingItem.unitPrice 
@@ -95,7 +97,7 @@ function normalizeProductName(name: string): string {
 export function generateMergePreview(
   existing: Invoice,
   existingLineItems: InvoiceLineItem[],
-  newLineItems: InvoiceLineItem[]
+  newLineItems: Partial<InvoiceLineItem>[]
 ): {
   totalLineItems: number;
   duplicateLineItems: number;

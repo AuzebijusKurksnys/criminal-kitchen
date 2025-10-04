@@ -14,8 +14,8 @@ interface DuplicateInvoiceDialogProps {
   onCancel: () => void;
   duplicateInfo: DuplicateCheckResult;
   newInvoiceData: {
-    invoice: Invoice;
-    lineItems: InvoiceLineItem[];
+    invoice: Partial<Invoice>;
+    lineItems: Partial<InvoiceLineItem>[];
   };
 }
 
@@ -72,10 +72,10 @@ export function DuplicateInvoiceDialog({
             <div className="bg-gray-700 p-4 rounded-lg">
               <h3 className="text-lg font-medium text-white mb-3">New Invoice</h3>
               <div className="space-y-2 text-sm">
-                <div><span className="text-gray-400">Number:</span> <span className="text-white">{newInvoiceData.invoice.invoiceNumber}</span></div>
-                <div><span className="text-gray-400">Date:</span> <span className="text-white">{newInvoiceData.invoice.invoiceDate}</span></div>
-                <div><span className="text-gray-400">Supplier:</span> <span className="text-white">{newInvoiceData.invoice.supplierName}</span></div>
-                <div><span className="text-gray-400">Total:</span> <span className="text-white">€{newInvoiceData.invoice.totalInclVat?.toFixed(2)}</span></div>
+                <div><span className="text-gray-400">Number:</span> <span className="text-white">{newInvoiceData.invoice.invoiceNumber || 'N/A'}</span></div>
+                <div><span className="text-gray-400">Date:</span> <span className="text-white">{newInvoiceData.invoice.invoiceDate || 'N/A'}</span></div>
+                <div><span className="text-gray-400">Supplier:</span> <span className="text-white">{newInvoiceData.invoice.supplierName || 'N/A'}</span></div>
+                <div><span className="text-gray-400">Total:</span> <span className="text-white">€{newInvoiceData.invoice.totalInclVat?.toFixed(2) || '0.00'}</span></div>
                 <div><span className="text-gray-400">Line Items:</span> <span className="text-white">{newInvoiceData.lineItems.length}</span></div>
               </div>
             </div>

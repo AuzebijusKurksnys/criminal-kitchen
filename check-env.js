@@ -8,9 +8,10 @@ console.log('VITE_AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT:', process.env.VITE_AZURE
 console.log('VITE_AZURE_DOCUMENT_INTELLIGENCE_KEY:', process.env.VITE_AZURE_DOCUMENT_INTELLIGENCE_KEY ? '✅ SET' : '❌ NOT SET');
 console.log('================================\n');
 
-// Fail build if critical vars are missing
-if (!process.env.VITE_SUPABASE_URL || !process.env.VITE_SUPABASE_ANON_KEY) {
-  console.error('❌ ERROR: Supabase environment variables are required!');
+// Fail build if critical vars are missing (only in production/CI)
+const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+if (isProduction && (!process.env.VITE_SUPABASE_URL || !process.env.VITE_SUPABASE_ANON_KEY)) {
+  console.error('❌ ERROR: Supabase environment variables are required in production!');
   process.exit(1);
 }
 

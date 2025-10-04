@@ -1036,6 +1036,46 @@ export async function checkInvoiceExists(supplierId: string, invoiceNumber: stri
   return data && data.length > 0;
 }
 
+function mapInvoiceFromSupabase(data: any): Invoice {
+  return {
+    id: data.id,
+    supplierId: data.supplier_id,
+    invoiceNumber: data.invoice_number,
+    invoiceDate: data.invoice_date,
+    totalExclVat: Number(data.total_excl_vat) || 0,
+    totalInclVat: Number(data.total_incl_vat) || 0,
+    vatAmount: Number(data.vat_amount) || 0,
+    discountAmount: Number(data.discount_amount) || 0,
+    currency: data.currency || 'EUR',
+    status: data.status as Invoice['status'],
+    filePath: data.file_path || undefined,
+    createdAt: data.created_at || new Date().toISOString(),
+    updatedAt: data.updated_at || new Date().toISOString(),
+    supplierName: data.suppliers?.name
+  };
+}
+
+function mapInvoiceLineItemFromSupabase(data: any): InvoiceLineItem {
+  return {
+    id: data.id,
+    invoiceId: data.invoice_id,
+    productId: data.product_id || undefined,
+    productName: data.product_name,
+    description: data.description || undefined,
+    quantity: Number(data.quantity) || 0,
+    unit: data.unit,
+    unitPrice: Number(data.unit_price) || 0,
+    totalPrice: Number(data.total_price) || 0,
+    vatRate: Number(data.vat_rate) || 0,
+    matchedProductId: data.matched_product_id || undefined,
+    matchConfidence: data.match_confidence || undefined,
+    needsReview: Boolean(data.needs_review),
+    notes: data.notes || undefined,
+    createdAt: data.created_at || new Date().toISOString(),
+    updatedAt: data.updated_at || new Date().toISOString()
+  };
+}
+
 export async function findExistingInvoice(supplierId: string, invoiceNumber: string): Promise<Invoice | null> {
   const { data, error } = await supabase
     .from('invoices')
