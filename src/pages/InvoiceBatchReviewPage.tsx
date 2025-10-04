@@ -4,6 +4,7 @@ import { showToast } from '../components/Toast';
 import { listProducts, listSuppliers, createInvoice, createInvoiceLineItem, uploadInvoiceFile, updateInvoice, createSupplier, createProduct, createSupplierPrice, checkInvoiceExists } from '../data/store';
 import type { InvoiceProcessingResult, Product, Supplier, InvoiceLineItem, Unit } from '../data/types';
 import { generateId } from '../utils/id';
+import { findMatchingSupplier, cleanSupplierName } from '../utils/supplierNameUtils';
 
 interface BatchReviewItem {
   file: File;
@@ -69,6 +70,42 @@ export function InvoiceBatchReviewPage() {
       ]);
       setProducts(productsData);
       setSuppliers(suppliersData);
+
+      // Auto-select supplier if all invoices have the same supplier
+      if (batchResults && batchResults.length > 0) {
+        const supplierNames = batchResults
+          .map(item => item.result.supplierInfo?.name)
+          .filter(Boolean)
+          .map(name => cleanSupplierName(name))
+          .filter(Boolean);
+        
+        if (supplierNames.length > 0) {
+          // Find the most common supplier name
+          const supplierCounts = supplierNames.reduce((acc, name) => {
+            acc[name] = (acc[name] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>);
+          
+          const mostCommonSupplier = Object.entries(supplierCounts)
+            .sort(([,a], [,b]) => b - a)[0]?.[0];
+          
+          if (mostCommonSupplier) {
+            console.log('🔍 Batch supplier matching:', {
+              supplierNames,
+              mostCommonSupplier,
+              availableSuppliers: suppliersData.map(s => s.name)
+            });
+            
+            const matchingSupplier = findMatchingSupplier(mostCommonSupplier, suppliersData);
+            if (matchingSupplier) {
+              setSelectedSupplierId(matchingSupplier.id);
+              console.log('✅ Auto-selected batch supplier:', matchingSupplier.name);
+            } else {
+              console.log('❌ No matching supplier found for batch:', mostCommonSupplier);
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error('Error loading data:', error);
       showToast('error', 'Failed to load product and supplier data');
