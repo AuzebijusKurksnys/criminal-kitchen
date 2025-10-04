@@ -17,7 +17,8 @@ import {
   checkInvoiceExists,
   updateInvoiceLineItem,
   deleteInvoiceLineItem,
-  getInvoiceLineItems
+  getInvoiceLineItems,
+  deleteInvoice
 } from '../data/store';
 import { findProductMatches } from '../services/invoiceParser';
 import { findMatchingSupplier, cleanSupplierName } from '../utils/supplierNameUtils';
@@ -27,7 +28,8 @@ import type {
   InvoiceProcessingResult, 
   Supplier, 
   Product, 
-  ProductMatch
+  ProductMatch,
+  InvoiceLineItem
 } from '../data/types';
 import { generateId, generateTimestamp } from '../utils/id';
 
@@ -313,7 +315,7 @@ export function InvoiceReviewPage() {
       await deleteInvoice(existingInvoice.id);
 
       // 3. Create the new invoice and its line items
-      const newInvoiceId = await createInvoice({
+      const newInvoice = await createInvoice({
         supplierId: selectedSupplierId,
         invoiceNumber: extractedData.invoice.invoiceNumber!,
         invoiceDate: extractedData.invoice.invoiceDate!,
@@ -325,6 +327,7 @@ export function InvoiceReviewPage() {
         status: 'pending',
         filePath: extractedData.invoice.filePath,
       });
+      const newInvoiceId = newInvoice.id;
 
       for (const item of extractedData.lineItems) {
         await createInvoiceLineItem({
