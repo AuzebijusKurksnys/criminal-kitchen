@@ -56,11 +56,20 @@ export function InvoiceReviewPage() {
     }
 
     // Clean the supplier name in the extracted data
+    const originalSupplierName = state.extractedData.supplierInfo?.name;
+    const cleanedSupplierName = cleanSupplierName(originalSupplierName);
+    
+    console.log('🔍 DIRECT TEST:', {
+      original: originalSupplierName,
+      cleaned: cleanedSupplierName,
+      testString: 'UAB "Foodlevel" PVM mok. kodas r.1 Juridinis'
+    });
+    
     const cleanedData = {
       ...state.extractedData,
       supplierInfo: state.extractedData.supplierInfo ? {
         ...state.extractedData.supplierInfo,
-        name: cleanSupplierName(state.extractedData.supplierInfo.name) || state.extractedData.supplierInfo.name
+        name: cleanedSupplierName || state.extractedData.supplierInfo.name
       } : undefined
     };
     
