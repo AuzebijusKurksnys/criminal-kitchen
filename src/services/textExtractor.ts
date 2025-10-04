@@ -1,5 +1,6 @@
 // Direct text extraction from PDF using PDF.js text layer
 import * as pdfjsLib from 'pdfjs-dist';
+import { cleanSupplierName } from '../utils/supplierNameUtils';
 
 interface ParsedProduct {
   productName: string;
@@ -327,23 +328,25 @@ export class TextExtractor {
   }
 
   private static extractSupplierName(text: string): string | undefined {
+    let rawSupplierName: string | undefined;
+    
     // Try Foodlevel format first
     let supplierMatch = text.match(/Tiek[ėe]jas:\s*([^\n]+)/i);
     if (supplierMatch) {
-      const raw = supplierMatch[1]
-        .split(/PVM|Juridi|Bankas|Gavėjas/)[0]
-        .replace(/\s{2,}.*/, '')
-        .trim();
-      return raw || undefined;
+      rawSupplierName = supplierMatch[1].trim();
+    } else {
+      // Try Lidl format - look for "UAB" followed by company name
+      supplierMatch = text.match(/UAB\s+([^\n\r]+?)(?:\s+Adresas|$)/i);
+      if (supplierMatch) {
+        rawSupplierName = `UAB ${supplierMatch[1].trim()}`;
+      }
     }
     
-    // Try Lidl format - look for "UAB" followed by company name
-    supplierMatch = text.match(/UAB\s+([^\n\r]+?)(?:\s+Adresas|$)/i);
-    if (supplierMatch) {
-      return `UAB ${supplierMatch[1].trim()}`;
-    }
+    // Apply the shared cleanup logic
+    const cleanedName = cleanSupplierName(rawSupplierName);
+    console.log('🧹 TextExtractor supplier cleanup:', { raw: rawSupplierName, cleaned: cleanedName });
     
-    return undefined;
+    return cleanedName;
   }
 
   private static extractTableRows(text: string): string[] {
