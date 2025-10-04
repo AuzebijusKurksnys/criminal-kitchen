@@ -7,6 +7,63 @@ interface AzureDocumentIntelligenceConfig {
   apiKey: string;
 }
 
+// Global rate limiter to prevent overwhelming Azure APIs
+class AzureRateLimiter {
+  private static instance: AzureRateLimiter;
+  private queue: Array<() => Promise<any>> = [];
+  private isProcessing = false;
+  private lastRequestTime = 0;
+  private readonly minInterval = 2000; // Minimum 2 seconds between requests
+
+  static getInstance(): AzureRateLimiter {
+    if (!AzureRateLimiter.instance) {
+      AzureRateLimiter.instance = new AzureRateLimiter();
+    }
+    return AzureRateLimiter.instance;
+  }
+
+  async execute<T>(operation: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this.queue.push(async () => {
+        try {
+          const result = await operation();
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      });
+      this.processQueue();
+    });
+  }
+
+  private async processQueue(): Promise<void> {
+    if (this.isProcessing || this.queue.length === 0) {
+      return;
+    }
+
+    this.isProcessing = true;
+
+    while (this.queue.length > 0) {
+      const now = Date.now();
+      const timeSinceLastRequest = now - this.lastRequestTime;
+      
+      if (timeSinceLastRequest < this.minInterval) {
+        const waitTime = this.minInterval - timeSinceLastRequest;
+        console.log(`⏳ Rate limiter: waiting ${waitTime}ms before next request...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+
+      const operation = this.queue.shift();
+      if (operation) {
+        this.lastRequestTime = Date.now();
+        await operation();
+      }
+    }
+
+    this.isProcessing = false;
+  }
+}
+
 interface AzureAnalysisResult {
   status: string;
   createdDateTime: string;
@@ -55,34 +112,41 @@ export class AzureDocumentIntelligenceService {
 
   // Try multiple Azure models with intelligent fallback and retry logic
   async analyzeInvoice(file: File): Promise<InvoiceProcessingResult> {
-    const models = [
-      'prebuilt-invoice',      // Specialized invoice model (best for standard invoices)
-      'prebuilt-document',     // General document model (fallback for unusual layouts)
-      'prebuilt-layout'        // Layout model (last resort - extracts all text/tables)
-    ];
+    const rateLimiter = AzureRateLimiter.getInstance();
+    
+    return rateLimiter.execute(async () => {
+      const models = [
+        'prebuilt-invoice',      // Specialized invoice model (best for standard invoices)
+        'prebuilt-document',     // General document model (fallback for unusual layouts)
+        'prebuilt-layout'        // Layout model (last resort - extracts all text/tables)
+      ];
 
-    let lastError: Error | null = null;
+      let lastError: Error | null = null;
 
-    for (const model of models) {
-      try {
-        console.log(`🔵 Trying Azure model: ${model}`);
-        return await this.analyzeWithRetry(file, model);
-      } catch (error) {
-        console.warn(`❌ Azure model ${model} failed:`, error);
-        lastError = error as Error;
-        
-        // If it's a rate limit error, wait and retry
-        if (error instanceof Error && error.message.includes('429')) {
-          console.log('⏳ Rate limit hit, waiting 5 seconds before trying next model...');
-          await new Promise(resolve => setTimeout(resolve, 5000));
+      for (const model of models) {
+        try {
+          console.log(`🔵 Trying Azure model: ${model}`);
+          return await this.analyzeWithRetry(file, model);
+        } catch (error) {
+          console.warn(`❌ Azure model ${model} failed:`, error);
+          lastError = error as Error;
+          
+          // If it's a rate limit error, wait longer before trying next model
+          if (error instanceof Error && error.message.includes('429')) {
+            console.log('⏳ Rate limit hit, waiting 10 seconds before trying next model...');
+            await new Promise(resolve => setTimeout(resolve, 10000));
+          } else {
+            // For other errors, wait briefly before trying next model
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
         }
       }
-    }
 
-    throw lastError || new Error('All Azure models failed');
+      throw lastError || new Error('All Azure models failed');
+    });
   }
 
-  private async analyzeWithRetry(file: File, model: string, maxRetries: number = 3): Promise<InvoiceProcessingResult> {
+  private async analyzeWithRetry(file: File, model: string, maxRetries: number = 5): Promise<InvoiceProcessingResult> {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         console.log(`🔄 Azure ${model} attempt ${attempt}/${maxRetries}`);
@@ -94,15 +158,24 @@ export class AzureDocumentIntelligenceService {
           throw error;
         }
         
-        // If it's a rate limit error, wait longer before retrying
+        // Calculate wait time with exponential backoff and jitter
+        let waitTime: number;
+        
         if (error instanceof Error && error.message.includes('429')) {
-          const waitTime = attempt * 2000; // 2s, 4s, 6s
-          console.log(`⏳ Rate limit hit, waiting ${waitTime}ms before retry...`);
-          await new Promise(resolve => setTimeout(resolve, waitTime));
+          // For rate limit errors, use longer exponential backoff with jitter
+          const baseDelay = Math.min(1000 * Math.pow(2, attempt - 1), 30000); // Cap at 30 seconds
+          const jitter = Math.random() * 1000; // Add up to 1 second of jitter
+          waitTime = baseDelay + jitter;
+          console.log(`⏳ Rate limit hit, waiting ${Math.round(waitTime)}ms before retry...`);
         } else {
-          // For other errors, wait briefly before retry
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // For other errors, use shorter backoff
+          const baseDelay = Math.min(500 * Math.pow(1.5, attempt - 1), 5000); // Cap at 5 seconds
+          const jitter = Math.random() * 500; // Add up to 0.5 seconds of jitter
+          waitTime = baseDelay + jitter;
+          console.log(`⏳ Error occurred, waiting ${Math.round(waitTime)}ms before retry...`);
         }
+        
+        await new Promise(resolve => setTimeout(resolve, waitTime));
       }
     }
     
@@ -124,7 +197,8 @@ export class AzureDocumentIntelligenceService {
       });
 
       if (!analyzeResponse.ok) {
-        throw new Error(`Azure Document Intelligence error: ${analyzeResponse.status}`);
+        const errorText = await analyzeResponse.text().catch(() => 'Unknown error');
+        throw new Error(`Azure Document Intelligence error: ${analyzeResponse.status} - ${errorText}`);
       }
 
       // Get operation location from response headers
@@ -157,7 +231,8 @@ export class AzureDocumentIntelligenceService {
       });
 
       if (!response.ok) {
-        throw new Error(`Polling error: ${response.status}`);
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`Polling error: ${response.status} - ${errorText}`);
       }
 
       const result: AzureAnalysisResult = await response.json();
