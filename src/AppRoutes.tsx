@@ -15,6 +15,7 @@ import { AdminMergeDippers } from './pages/AdminMergeDippers';
 import { AdminFixSuppliers } from './pages/AdminFixSuppliers';
 import { AdminCleanup } from './pages/AdminCleanup';
 import { AdminFixLidlName } from './pages/AdminFixLidlName';
+import { AdminMergeDuplicateProducts } from './pages/AdminMergeDuplicateProducts';
 
 export function AppRoutes() {
   return (
@@ -32,10 +33,11 @@ export function AppRoutes() {
       <Route path="/tech-cards" element={<TechCardsPage />} />
       <Route path="/journals" element={<JournalsPage />} />
       <Route path="/reports" element={<ReportsPage />} />
-      <Route path="/admin/merge-dippers" element={<AdminMergeDippers />} />
-      <Route path="/admin/fix-suppliers" element={<AdminFixSuppliers />} />
-      <Route path="/admin/cleanup" element={<AdminCleanup />} />
-      <Route path="/admin/fix-lidl-name" element={<AdminFixLidlName />} />
+        <Route path="/admin/merge-dippers" element={<AdminMergeDippers />} />
+        <Route path="/admin/fix-suppliers" element={<AdminFixSuppliers />} />
+        <Route path="/admin/cleanup" element={<AdminCleanup />} />
+        <Route path="/admin/fix-lidl-name" element={<AdminFixLidlName />} />
+        <Route path="/admin/merge-duplicate-products" element={<AdminMergeDuplicateProducts />} />
     </Routes>
   );
 }
