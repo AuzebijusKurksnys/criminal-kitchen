@@ -75,9 +75,9 @@ export function InvoiceBatchReviewPage() {
       if (batchResults && batchResults.length > 0) {
         const supplierNames = batchResults
           .map(item => item.result.supplierInfo?.name)
-          .filter(Boolean)
+          .filter((name): name is string => Boolean(name))
           .map(name => cleanSupplierName(name))
-          .filter(Boolean);
+          .filter((name): name is string => Boolean(name));
         
         if (supplierNames.length > 0) {
           // Find the most common supplier name
