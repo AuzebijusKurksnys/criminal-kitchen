@@ -64,9 +64,10 @@ export function UnifiedInvoiceUpload({ className = '' }: UnifiedInvoiceUploadPro
         // Continue processing other files even if one fails
       }
 
-      // Add a small delay between files to be gentle on Azure API
+      // Add a longer delay between files to respect Azure F0 tier limits
       if (i < files.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log(`⏳ Waiting 15 seconds before processing next file...`);
+        await new Promise(resolve => setTimeout(resolve, 15000));
       }
     }
 

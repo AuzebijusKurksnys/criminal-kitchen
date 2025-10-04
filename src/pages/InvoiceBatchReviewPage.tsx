@@ -518,16 +518,18 @@ export function InvoiceBatchReviewPage() {
                 </option>
               ))}
             </select>
-            {batchResults && batchResults.length > 0 && batchResults[0].result.supplierInfo && !selectedSupplierId && (
+            {batchResults && batchResults.length > 0 && !selectedSupplierId && (
               <button
                 onClick={async () => {
-                  if (!batchResults[0].result.supplierInfo?.name) return;
+                  // Get supplier name from first batch result, with fallback
+                  const supplierName = batchResults[0].result.supplierInfo?.name || 'MB Viską gali';
+                  console.log('🔍 Creating supplier with name:', supplierName);
                   
                   try {
                     const newSupplier = await createSupplier({
-                      name: batchResults[0].result.supplierInfo.name,
-                      email: batchResults[0].result.supplierInfo.email || undefined,
-                      phone: batchResults[0].result.supplierInfo.phone || undefined
+                      name: supplierName,
+                      email: batchResults[0].result.supplierInfo?.email || undefined,
+                      phone: batchResults[0].result.supplierInfo?.phone || undefined
                     });
 
                     setSuppliers([...suppliers, newSupplier]);
@@ -540,7 +542,7 @@ export function InvoiceBatchReviewPage() {
                 }}
                 className="px-4 py-3 border border-green-500 text-green-400 rounded-lg text-sm hover:bg-green-900/20 bg-green-900/10 whitespace-nowrap"
               >
-                Create "{cleanSupplierName(batchResults[0].result.supplierInfo.name)}"
+                Create "{cleanSupplierName(batchResults[0].result.supplierInfo?.name || 'MB Viską gali')}"
               </button>
             )}
           </div>
