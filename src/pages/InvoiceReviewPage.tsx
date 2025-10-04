@@ -17,6 +17,7 @@ import {
   checkInvoiceExists
 } from '../data/store';
 import { findProductMatches } from '../services/invoiceParser';
+import { findMatchingSupplier } from '../utils/supplierNameUtils';
 import type { 
   InvoiceProcessingResult, 
   Supplier, 
@@ -87,14 +88,17 @@ export function InvoiceReviewPage() {
         setProductMatches(matches);
       }
 
-      // Auto-select supplier if name matches
+      // Auto-select supplier if name matches using smart matching
       if (state?.extractedData?.supplierInfo?.name) {
-        const matchingSupplier = suppliersData.find(s => 
-          s.name.toLowerCase().includes(state.extractedData.supplierInfo!.name.toLowerCase()) ||
-          state.extractedData.supplierInfo!.name.toLowerCase().includes(s.name.toLowerCase())
+        const matchingSupplier = findMatchingSupplier(
+          state.extractedData.supplierInfo.name,
+          suppliersData
         );
         if (matchingSupplier) {
           setSelectedSupplierId(matchingSupplier.id);
+          console.log('✅ Auto-selected supplier:', matchingSupplier.name);
+        } else {
+          console.log('❌ No matching supplier found for:', state.extractedData.supplierInfo.name);
         }
       }
     } catch (error) {
