@@ -195,6 +195,9 @@ export class AzureDocumentIntelligenceService {
     // Azure's VendorName field might only have abbreviated name - look for full name in content
     let vendorName = fields.VendorName?.value || fields.VendorName?.content;
     
+    // Clean up supplier name to remove unnecessary details
+    vendorName = this.cleanSupplierName(vendorName);
+    
     // If vendor name is too short (like "LiDL"), try to find full company name in raw content
     if (vendorName && vendorName.length < 10) {
       const content = azureResult.analyzeResult?.content || '';
@@ -210,13 +213,13 @@ export class AzureDocumentIntelligenceService {
       const supplierMatch = content.match(/Tiek[eė]jas[:\s]+([^\n]+)/i);
       
       if (lithuanianMatch) {
-        vendorName = lithuanianMatch[0].trim();
+        vendorName = this.cleanSupplierName(lithuanianMatch[0].trim());
         console.log('📝 Found Lithuanian company name:', vendorName);
       } else if (internationalMatch) {
-        vendorName = internationalMatch[0].trim();
+        vendorName = this.cleanSupplierName(internationalMatch[0].trim());
         console.log('📝 Found international company name:', vendorName);
       } else if (supplierMatch) {
-        vendorName = supplierMatch[1].trim();
+        vendorName = this.cleanSupplierName(supplierMatch[1].trim());
         console.log('📝 Found supplier name from label:', vendorName);
       }
     }
@@ -346,6 +349,34 @@ export class AzureDocumentIntelligenceService {
     };
 
     return unitMap[cleaned] || 'pcs';
+  }
+
+  private cleanSupplierName(supplierName: string | undefined): string | undefined {
+    if (!supplierName) return supplierName;
+    
+    let cleaned = supplierName.trim();
+    
+    // Remove VAT registration codes and legal suffixes
+    // Lithuanian patterns
+    cleaned = cleaned.replace(/\s*PVM\s+mok[ėe]tojo\s+kodas\s+r?\.?\s*[A-Z0-9\s]+/gi, '');
+    cleaned = cleaned.replace(/\s*Juridinis\s*adresas[^\n]*/gi, '');
+    cleaned = cleaned.replace(/\s*Adresas[^\n]*/gi, '');
+    cleaned = cleaned.replace(/\s*[A-Z]{2}[0-9]{11}\s*/g, ''); // LT tax codes
+    cleaned = cleaned.replace(/\s*[A-Z]{2}[0-9]{9}\s*/g, ''); // Shorter tax codes
+    
+    // International patterns
+    cleaned = cleaned.replace(/\s*VAT\s*[A-Z0-9\s]+/gi, '');
+    cleaned = cleaned.replace(/\s*Tax\s*ID[:\s]*[A-Z0-9\s]+/gi, '');
+    cleaned = cleaned.replace(/\s*Registration\s*No[:\s]*[A-Z0-9\s]+/gi, '');
+    
+    // Remove extra quotes and clean up
+    cleaned = cleaned.replace(/^["']+|["']+$/g, ''); // Remove surrounding quotes
+    cleaned = cleaned.replace(/\s+/g, ' '); // Normalize spaces
+    cleaned = cleaned.trim();
+    
+    console.log('🧹 Cleaned supplier name:', { original: supplierName, cleaned });
+    
+    return cleaned || supplierName;
   }
 
   private getSmartUnit(productName: string, extractedUnit: string, quantity: number): string {
