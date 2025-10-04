@@ -14,7 +14,10 @@ import {
   createSupplierPrice,
   listProducts,
   getProduct,
-  checkInvoiceExists
+  checkInvoiceExists,
+  updateInvoiceLineItem,
+  deleteInvoiceLineItem,
+  getInvoiceLineItems
 } from '../data/store';
 import { findProductMatches } from '../services/invoiceParser';
 import { findMatchingSupplier, cleanSupplierName } from '../utils/supplierNameUtils';
@@ -237,42 +240,43 @@ export function InvoiceReviewPage() {
 
       // 1. Update the existing invoice in the database
       await updateInvoice(updatedInvoice.id, {
-        total_excl_vat: updatedInvoice.totalExclVat,
-        total_incl_vat: updatedInvoice.totalInclVat,
-        vat_amount: updatedInvoice.vatAmount,
-        file_path: updatedInvoice.filePath,
-        updated_at: updatedInvoice.updatedAt,
+        totalExclVat: updatedInvoice.totalExclVat,
+        totalInclVat: updatedInvoice.totalInclVat,
+        vatAmount: updatedInvoice.vatAmount,
+        filePath: updatedInvoice.filePath,
+        updatedAt: updatedInvoice.updatedAt,
       });
 
       // 2. Update/Create line items
-      const existingLineItemIds = new Set(existingLineItems.map(item => item.id));
+      const existingLineItemIds = new Set(existingLineItems.map((item: InvoiceLineItem) => item.id));
 
       for (const item of updatedLineItems) {
         if (item.id && existingLineItemIds.has(item.id)) {
           // Update existing line item
           await updateInvoiceLineItem(item.id, {
-            product_id: item.productId,
-            product_name: item.productName,
+            productId: item.productId,
+            productName: item.productName,
             description: item.description,
             quantity: item.quantity,
             unit: item.unit,
-            unit_price: item.unitPrice,
-            total_price: item.totalPrice,
-            vat_rate: item.vatRate,
-            updated_at: item.updatedAt,
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice,
+            vatRate: item.vatRate,
+            updatedAt: item.updatedAt,
           });
         } else {
           // Create new line item
           await createInvoiceLineItem({
-            invoice_id: existingInvoice.id,
-            product_id: item.productId,
-            product_name: item.productName,
+            invoiceId: existingInvoice.id,
+            productId: item.productId,
+            productName: item.productName,
             description: item.description,
             quantity: item.quantity,
             unit: item.unit,
-            unit_price: item.unitPrice,
-            total_price: item.totalPrice,
-            vat_rate: item.vatRate,
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice,
+            vatRate: item.vatRate || 0,
+            needsReview: false,
           });
         }
       }
@@ -310,27 +314,30 @@ export function InvoiceReviewPage() {
 
       // 3. Create the new invoice and its line items
       const newInvoiceId = await createInvoice({
-        supplier_id: selectedSupplierId,
-        invoice_number: extractedData.invoice.invoiceNumber!,
-        invoice_date: extractedData.invoice.invoiceDate!,
-        total_excl_vat: extractedData.invoice.totalExclVat!,
-        total_incl_vat: extractedData.invoice.totalInclVat!,
-        vat_amount: extractedData.invoice.vatAmount!,
+        supplierId: selectedSupplierId,
+        invoiceNumber: extractedData.invoice.invoiceNumber!,
+        invoiceDate: extractedData.invoice.invoiceDate!,
+        totalExclVat: extractedData.invoice.totalExclVat!,
+        totalInclVat: extractedData.invoice.totalInclVat!,
+        vatAmount: extractedData.invoice.vatAmount!,
+        discountAmount: 0,
+        currency: 'EUR',
         status: 'pending',
-        file_path: extractedData.invoice.filePath,
+        filePath: extractedData.invoice.filePath,
       });
 
       for (const item of extractedData.lineItems) {
         await createInvoiceLineItem({
-          invoice_id: newInvoiceId,
-          product_id: item.productId,
-          product_name: item.productName!,
+          invoiceId: newInvoiceId,
+          productId: item.productId,
+          productName: item.productName!,
           description: item.description,
           quantity: item.quantity!,
           unit: item.unit!,
-          unit_price: item.unitPrice!,
-          total_price: item.totalPrice!,
-          vat_rate: item.vatRate,
+          unitPrice: item.unitPrice!,
+          totalPrice: item.totalPrice!,
+          vatRate: item.vatRate || 0,
+          needsReview: false,
         });
       }
 
