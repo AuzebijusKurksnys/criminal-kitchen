@@ -18,6 +18,8 @@ import {
 } from '../data/store';
 import { findProductMatches } from '../services/invoiceParser';
 import { findMatchingSupplier, cleanSupplierName } from '../utils/supplierNameUtils';
+import { checkForDuplicateInvoice } from '../utils/invoiceDuplicateHandler';
+import { DuplicateInvoiceDialog } from '../components/DuplicateInvoiceDialog';
 import type { 
   InvoiceProcessingResult, 
   Supplier, 
@@ -48,6 +50,8 @@ export function InvoiceReviewPage() {
   const [editingItems, setEditingItems] = useState<{ [lineItemIndex: number]: boolean }>({});
   const [editedData, setEditedData] = useState<InvoiceProcessingResult | null>(null);
   const [mismatchWarning, setMismatchWarning] = useState<string | null>(null);
+  const [duplicateInfo, setDuplicateInfo] = useState<any>(null);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
 
   useEffect(() => {
     if (!state?.extractedData || !state?.file) {
@@ -208,6 +212,26 @@ export function InvoiceReviewPage() {
     }
   };
 
+  const handleMergeInvoice = async (options: any) => {
+    console.log('🔄 Merging duplicate invoice with options:', options);
+    setShowDuplicateDialog(false);
+    // TODO: Implement merge logic
+    showToast('info', 'Merge functionality will be implemented in the next update');
+  };
+
+  const handleReplaceInvoice = async () => {
+    console.log('🔄 Replacing duplicate invoice');
+    setShowDuplicateDialog(false);
+    // TODO: Implement replace logic
+    showToast('info', 'Replace functionality will be implemented in the next update');
+  };
+
+  const handleCancelUpload = () => {
+    console.log('❌ Cancelling duplicate invoice upload');
+    setShowDuplicateDialog(false);
+    navigate('/invoices/upload');
+  };
+
   const handleApproveInvoice = async () => {
     if (!extractedData || !file || !selectedSupplierId) {
       showToast('error', 'Please select a supplier');
@@ -217,15 +241,17 @@ export function InvoiceReviewPage() {
     setIsProcessing(true);
 
     try {
-      // Check if invoice already exists for this supplier
-      console.log('Checking for existing invoice...', { 
+      // Check for duplicate invoice with smart merging options
+      console.log('Checking for duplicate invoice...', { 
         supplierId: selectedSupplierId, 
         invoiceNumber: extractedData.invoice.invoiceNumber 
       });
       
-      const existingInvoice = await checkInvoiceExists(selectedSupplierId!, extractedData.invoice.invoiceNumber!);
-      if (existingInvoice) {
-        showToast('error', `Invoice ${extractedData.invoice.invoiceNumber} already exists for this supplier`);
+      const duplicateCheck = await checkForDuplicateInvoice(selectedSupplierId!, extractedData.invoice.invoiceNumber!);
+      if (duplicateCheck.isDuplicate) {
+        console.log('⚠️ Duplicate invoice detected, showing merge dialog');
+        setDuplicateInfo(duplicateCheck);
+        setShowDuplicateDialog(true);
         setIsProcessing(false);
         return;
       }
@@ -756,6 +782,20 @@ export function InvoiceReviewPage() {
           </button>
         </div>
       </div>
+
+      {/* Duplicate Invoice Dialog */}
+      <DuplicateInvoiceDialog
+        isOpen={showDuplicateDialog}
+        onClose={() => setShowDuplicateDialog(false)}
+        onMerge={handleMergeInvoice}
+        onReplace={handleReplaceInvoice}
+        onCancel={handleCancelUpload}
+        duplicateInfo={duplicateInfo}
+        newInvoiceData={{
+          invoice: extractedData?.invoice!,
+          lineItems: extractedData?.lineItems || []
+        }}
+      />
     </div>
   );
 }

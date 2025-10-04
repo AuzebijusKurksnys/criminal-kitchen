@@ -1036,6 +1036,55 @@ export async function checkInvoiceExists(supplierId: string, invoiceNumber: stri
   return data && data.length > 0;
 }
 
+export async function findExistingInvoice(supplierId: string, invoiceNumber: string): Promise<Invoice | null> {
+  const { data, error } = await supabase
+    .from('invoices')
+    .select(`
+      id,
+      supplier_id,
+      invoice_number,
+      invoice_date,
+      total_excl_vat,
+      total_incl_vat,
+      vat_rate,
+      status,
+      file_path,
+      created_at,
+      updated_at,
+      suppliers!inner(name)
+    `)
+    .eq('supplier_id', supplierId)
+    .eq('invoice_number', invoiceNumber)
+    .limit(1)
+    .single();
+  
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // No rows found
+      return null;
+    }
+    console.error('Error finding existing invoice:', error);
+    return null;
+  }
+  
+  return mapInvoiceFromSupabase(data);
+}
+
+export async function getInvoiceLineItems(invoiceId: string): Promise<InvoiceLineItem[]> {
+  const { data, error } = await supabase
+    .from('invoice_line_items')
+    .select('*')
+    .eq('invoice_id', invoiceId)
+    .order('line_number', { ascending: true });
+  
+  if (error) {
+    console.error('Error fetching invoice line items:', error);
+    return [];
+  }
+  
+  return (data || []).map(mapInvoiceLineItemFromSupabase);
+}
+
 export async function createInvoice(invoice: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>): Promise<Invoice> {
   // Check if invoice already exists for this supplier
   const exists = await checkInvoiceExists(invoice.supplierId, invoice.invoiceNumber);
