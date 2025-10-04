@@ -10,6 +10,7 @@ export interface Product {
   minStock?: number;
   category?: string;
   notes?: string;
+  package_weight_kg?: number; // Weight per package for products sold in packages
 }
 
 export interface Supplier {

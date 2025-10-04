@@ -12,9 +12,17 @@ export function formatPrice(price: number, currency: Currency): string {
 /**
  * Format quantity with unit
  */
-export function formatQuantity(quantity: number, unit: Unit): string {
+export function formatQuantity(quantity: number, unit: Unit, packageWeight?: number): string {
   const unitLabel = UNIT_LABELS[unit];
-  return `${quantity} ${unitLabel}`;
+  const baseQuantity = `${quantity} ${unitLabel}`;
+  
+  // If package weight is provided and unit is 'pcs', also show total weight
+  if (packageWeight && unit === 'pcs' && packageWeight > 0) {
+    const totalWeight = quantity * packageWeight;
+    return `${baseQuantity} (${totalWeight.toFixed(1)} kg)`;
+  }
+  
+  return baseQuantity;
 }
 
 /**

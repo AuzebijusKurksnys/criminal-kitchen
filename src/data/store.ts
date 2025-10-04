@@ -35,6 +35,7 @@ export async function listProducts(): Promise<Product[]> {
       minStock: row.min_stock ? Number(row.min_stock) : undefined,
       category: row.category || undefined,
       notes: row.notes || undefined,
+      package_weight_kg: row.package_weight_kg ? Number(row.package_weight_kg) : undefined,
     }));
   } catch (error) {
     handleSupabaseError(error, 'list products');
@@ -62,6 +63,7 @@ export async function getProduct(id: string): Promise<Product | undefined> {
       minStock: data.min_stock ? Number(data.min_stock) : undefined,
       category: data.category || undefined,
       notes: data.notes || undefined,
+      package_weight_kg: data.package_weight_kg ? Number(data.package_weight_kg) : undefined,
     };
   } catch (error) {
     handleSupabaseError(error, 'get product');
@@ -80,6 +82,7 @@ export async function createProduct(product: Omit<Product, 'id'>): Promise<Produ
       min_stock: product.minStock,
       category: product.category,
       notes: product.notes,
+      package_weight_kg: product.package_weight_kg,
     };
     console.log('insertData for Supabase:', insertData);
     
@@ -103,6 +106,7 @@ export async function createProduct(product: Omit<Product, 'id'>): Promise<Produ
       minStock: data.min_stock ? Number(data.min_stock) : undefined,
       category: data.category || undefined,
       notes: data.notes || undefined,
+      package_weight_kg: data.package_weight_kg ? Number(data.package_weight_kg) : undefined,
     };
   } catch (error) {
     handleSupabaseError(error, 'create product');
@@ -120,6 +124,7 @@ export async function updateProduct(product: Product): Promise<Product> {
       min_stock: product.minStock,
       category: product.category,
       notes: product.notes,
+      package_weight_kg: product.package_weight_kg,
       updated_at: new Date().toISOString(),
     };
     
@@ -141,6 +146,7 @@ export async function updateProduct(product: Product): Promise<Product> {
       minStock: data.min_stock ? Number(data.min_stock) : undefined,
       category: data.category || undefined,
       notes: data.notes || undefined,
+      package_weight_kg: data.package_weight_kg ? Number(data.package_weight_kg) : undefined,
     };
   } catch (error) {
     handleSupabaseError(error, 'update product');

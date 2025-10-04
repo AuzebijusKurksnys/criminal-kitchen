@@ -10,14 +10,13 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.4"
+    PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
       cleaning_logs: {
         Row: {
           area: string
-          created_at: string | null
           id: string
           notes: string | null
           status: string
@@ -26,7 +25,6 @@ export type Database = {
         }
         Insert: {
           area: string
-          created_at?: string | null
           id?: string
           notes?: string | null
           status: string
@@ -35,7 +33,6 @@ export type Database = {
         }
         Update: {
           area?: string
-          created_at?: string | null
           id?: string
           notes?: string | null
           status?: string
@@ -46,7 +43,6 @@ export type Database = {
       }
       equipment_checks: {
         Row: {
-          created_at: string | null
           equipment: string
           id: string
           notes: string | null
@@ -55,7 +51,6 @@ export type Database = {
           user_name: string
         }
         Insert: {
-          created_at?: string | null
           equipment: string
           id?: string
           notes?: string | null
@@ -64,7 +59,6 @@ export type Database = {
           user_name: string
         }
         Update: {
-          created_at?: string | null
           equipment?: string
           id?: string
           notes?: string | null
@@ -79,7 +73,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
-          invoice_id: string
+          invoice_id: string | null
           match_confidence: number | null
           matched_product_id: string | null
           needs_review: boolean | null
@@ -91,31 +85,31 @@ export type Database = {
           unit: string
           unit_price: number
           updated_at: string | null
-          vat_rate: number
+          vat_rate: number | null
         }
         Insert: {
           created_at?: string | null
           description?: string | null
           id?: string
-          invoice_id: string
+          invoice_id?: string | null
           match_confidence?: number | null
           matched_product_id?: string | null
           needs_review?: boolean | null
           notes?: string | null
           product_id?: string | null
           product_name: string
-          quantity: number
-          total_price: number
+          quantity?: number
+          total_price?: number
           unit: string
-          unit_price: number
+          unit_price?: number
           updated_at?: string | null
-          vat_rate?: number
+          vat_rate?: number | null
         }
         Update: {
           created_at?: string | null
           description?: string | null
           id?: string
-          invoice_id?: string
+          invoice_id?: string | null
           match_confidence?: number | null
           matched_product_id?: string | null
           needs_review?: boolean | null
@@ -127,7 +121,7 @@ export type Database = {
           unit?: string
           unit_price?: number
           updated_at?: string | null
-          vat_rate?: number
+          vat_rate?: number | null
         }
         Relationships: [
           {
@@ -135,13 +129,6 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "invoices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoice_line_items_matched_product_id_fkey"
-            columns: ["matched_product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
             referencedColumns: ["id"]
           },
           {
@@ -163,18 +150,18 @@ export type Database = {
           file_path: string | null
           file_size: number | null
           id: string
-          invoice_date: string
+          invoice_date: string | null
           invoice_number: string
           mime_type: string | null
           notes: string | null
           processed_at: string | null
           processed_by: string | null
-          status: string
-          supplier_id: string
-          total_excl_vat: number
-          total_incl_vat: number
+          status: string | null
+          supplier_id: string | null
+          total_excl_vat: number | null
+          total_incl_vat: number | null
           updated_at: string | null
-          vat_amount: number
+          vat_amount: number | null
         }
         Insert: {
           created_at?: string | null
@@ -185,18 +172,18 @@ export type Database = {
           file_path?: string | null
           file_size?: number | null
           id?: string
-          invoice_date: string
+          invoice_date?: string | null
           invoice_number: string
           mime_type?: string | null
           notes?: string | null
           processed_at?: string | null
           processed_by?: string | null
-          status?: string
-          supplier_id: string
-          total_excl_vat: number
-          total_incl_vat: number
+          status?: string | null
+          supplier_id?: string | null
+          total_excl_vat?: number | null
+          total_incl_vat?: number | null
           updated_at?: string | null
-          vat_amount: number
+          vat_amount?: number | null
         }
         Update: {
           created_at?: string | null
@@ -207,18 +194,18 @@ export type Database = {
           file_path?: string | null
           file_size?: number | null
           id?: string
-          invoice_date?: string
+          invoice_date?: string | null
           invoice_number?: string
           mime_type?: string | null
           notes?: string | null
           processed_at?: string | null
           processed_by?: string | null
-          status?: string
-          supplier_id?: string
-          total_excl_vat?: number
-          total_incl_vat?: number
+          status?: string | null
+          supplier_id?: string | null
+          total_excl_vat?: number | null
+          total_incl_vat?: number | null
           updated_at?: string | null
-          vat_amount?: number
+          vat_amount?: number | null
         }
         Relationships: [
           {
@@ -238,6 +225,7 @@ export type Database = {
           min_stock: number | null
           name: string
           notes: string | null
+          package_weight_kg: number | null
           quantity: number
           sku: string
           unit: string
@@ -250,6 +238,7 @@ export type Database = {
           min_stock?: number | null
           name: string
           notes?: string | null
+          package_weight_kg?: number | null
           quantity?: number
           sku: string
           unit: string
@@ -262,6 +251,7 @@ export type Database = {
           min_stock?: number | null
           name?: string
           notes?: string | null
+          package_weight_kg?: number | null
           quantity?: number
           sku?: string
           unit?: string
@@ -271,45 +261,42 @@ export type Database = {
       }
       supplier_prices: {
         Row: {
-          created_at: string | null
           currency: string
           id: string
           invoice_id: string | null
           last_updated: string | null
           preferred: boolean | null
           price: number
-          price_excl_vat: number
-          price_incl_vat: number
-          product_id: string
-          supplier_id: string
+          price_excl_vat: number | null
+          price_incl_vat: number | null
+          product_id: string | null
+          supplier_id: string | null
           vat_rate: number | null
         }
         Insert: {
-          created_at?: string | null
           currency?: string
           id?: string
           invoice_id?: string | null
           last_updated?: string | null
           preferred?: boolean | null
           price: number
-          price_excl_vat: number
-          price_incl_vat: number
-          product_id: string
-          supplier_id: string
+          price_excl_vat?: number | null
+          price_incl_vat?: number | null
+          product_id?: string | null
+          supplier_id?: string | null
           vat_rate?: number | null
         }
         Update: {
-          created_at?: string | null
           currency?: string
           id?: string
           invoice_id?: string | null
           last_updated?: string | null
           preferred?: boolean | null
           price?: number
-          price_excl_vat?: number
-          price_incl_vat?: number
-          product_id?: string
-          supplier_id?: string
+          price_excl_vat?: number | null
+          price_incl_vat?: number | null
+          product_id?: string | null
+          supplier_id?: string | null
           vat_rate?: number | null
         }
         Relationships: [
@@ -365,7 +352,7 @@ export type Database = {
       }
       tech_card_ingredients: {
         Row: {
-          created_at: string | null
+          created_at: string
           id: string
           netto_qty: number
           notes: string | null
@@ -375,7 +362,7 @@ export type Database = {
           yield_pct: number | null
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           id?: string
           netto_qty: number
           notes?: string | null
@@ -385,7 +372,7 @@ export type Database = {
           yield_pct?: number | null
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           id?: string
           netto_qty?: number
           notes?: string | null
@@ -413,31 +400,30 @@ export type Database = {
       }
       tech_cards: {
         Row: {
-          created_at: string | null
+          created_at: string
           id: string
           name: string
           notes: string | null
-          updated_at: string | null
+          updated_at: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           id?: string
           name: string
           notes?: string | null
-          updated_at?: string | null
+          updated_at?: string
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           id?: string
           name?: string
           notes?: string | null
-          updated_at?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
       temperature_checks: {
         Row: {
-          created_at: string | null
           id: string
           location: string
           notes: string | null
@@ -446,7 +432,6 @@ export type Database = {
           value_c: number
         }
         Insert: {
-          created_at?: string | null
           id?: string
           location: string
           notes?: string | null
@@ -455,7 +440,6 @@ export type Database = {
           value_c: number
         }
         Update: {
-          created_at?: string | null
           id?: string
           location?: string
           notes?: string | null

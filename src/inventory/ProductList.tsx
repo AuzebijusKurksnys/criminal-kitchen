@@ -279,10 +279,10 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
       sortable: true,
       render: (value, product) => (
         <div className="flex flex-col">
-          <span className="font-medium">{formatQuantity(value, product.unit)}</span>
+          <span className="font-medium">{formatQuantity(value, product.unit, product.package_weight_kg)}</span>
           {product.minStock && (
             <span className="text-xs text-gray-400">
-              Min: {formatQuantity(product.minStock, product.unit)}
+              Min: {formatQuantity(product.minStock, product.unit, product.package_weight_kg)}
             </span>
           )}
         </div>
