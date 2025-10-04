@@ -156,7 +156,7 @@ export function FileUpload({
             </p>
             <p className="text-sm text-gray-400 mt-1">
               Supports PDF, JPG, PNG, GIF, WebP up to {Math.round(maxSize / 1024 / 1024)}MB
-              {multiple ? ` • Max ${maxFiles} files` : ''}
+              {multiple ? ` • No file limit` : ''}
             </p>
           </div>
 

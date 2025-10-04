@@ -144,6 +144,9 @@ export function UnifiedInvoiceUpload({ className = '' }: UnifiedInvoiceUploadPro
           {selectedFiles.length === 0 ? (
             <FileUpload
               onFileSelect={handleFileSelect}
+              onMultipleFileSelect={(files) => {
+                files.forEach(handleFileSelect);
+              }}
               accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
               maxSize={10 * 1024 * 1024} // 10MB
               multiple={true}
