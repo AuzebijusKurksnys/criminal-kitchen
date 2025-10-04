@@ -274,7 +274,7 @@ export class AzureDocumentIntelligenceService {
       }
       return value || 0;
     };
-    
+
     // Transform to our format
     const result: InvoiceProcessingResult = {
       invoice: {

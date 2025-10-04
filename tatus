@@ -1,0 +1,199 @@
+[33mcommit 2a7f4a668d193eff6b96f261a935efc89b7fdc39[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: User <user@local>
+Date:   Sat Oct 4 12:34:12 2025 +0300
+
+    Fix Azure rate limiting issues with global rate limiter and improved retry logic
+    
+    - Added AzureRateLimiter singleton class to queue and throttle all Azure requests
+    - Increased retry attempts from 3 to 5 for better resilience
+    - Implemented exponential backoff with jitter for rate limit errors (up to 30s)
+    - Added shorter backoff for other errors (up to 5s)
+    - Improved error messages to include response text
+    - Increased wait time between models from 5s to 10s for rate limit errors
+    - Global rate limiter ensures minimum 2s between all Azure requests
+    - This should resolve the 429 errors during batch processing
+
+[1mdiff --git a/src/services/azureDocumentIntelligence.ts b/src/services/azureDocumentIntelligence.ts[m
+[1mindex e211394..046bdd7 100644[m
+[1m--- a/src/services/azureDocumentIntelligence.ts[m
+[1m+++ b/src/services/azureDocumentIntelligence.ts[m
+[36m@@ -7,6 +7,63 @@[m [minterface AzureDocumentIntelligenceConfig {[m
+   apiKey: string;[m
+ }[m
+ [m
+[32m+[m[32m// Global rate limiter to prevent overwhelming Azure APIs[m
+[32m+[m[32mclass AzureRateLimiter {[m
+[32m+[m[32m  private static instance: AzureRateLimiter;[m
+[32m+[m[32m  private queue: Array<() => Promise<any>> = [];[m
+[32m+[m[32m  private isProcessing = false;[m
+[32m+[m[32m  private lastRequestTime = 0;[m
+[32m+[m[32m  private readonly minInterval = 2000; // Minimum 2 seconds between requests[m
+[32m+[m
+[32m+[m[32m  static getInstance(): AzureRateLimiter {[m
+[32m+[m[32m    if (!AzureRateLimiter.instance) {[m
+[32m+[m[32m      AzureRateLimiter.instance = new AzureRateLimiter();[m
+[32m+[m[32m    }[m
+[32m+[m[32m    return AzureRateLimiter.instance;[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  async execute<T>(operation: () => Promise<T>): Promise<T> {[m
+[32m+[m[32m    return new Promise((resolve, reject) => {[m
+[32m+[m[32m      this.queue.push(async () => {[m
+[32m+[m[32m        try {[m
+[32m+[m[32m          const result = await operation();[m
+[32m+[m[32m          resolve(result);[m
+[32m+[m[32m        } catch (error) {[m
+[32m+[m[32m          reject(error);[m
+[32m+[m[32m        }[m
+[32m+[m[32m      });[m
+[32m+[m[32m      this.processQueue();[m
+[32m+[m[32m    });[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  private async processQueue(): Promise<void> {[m
+[32m+[m[32m    if (this.isProcessing || this.queue.length === 0) {[m
+[32m+[m[32m      return;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    this.isProcessing = true;[m
+[32m+[m
+[32m+[m[32m    while (this.queue.length > 0) {[m
+[32m+[m[32m      const now = Date.now();[m
+[32m+[m[32m      const timeSinceLastRequest = now - this.lastRequestTime;[m
+[32m+[m[41m      [m
+[32m+[m[32m      if (timeSinceLastRequest < this.minInterval) {[m
+[32m+[m[32m        const waitTime = this.minInterval - timeSinceLastRequest;[m
+[32m+[m[32m        console.log(`⏳ Rate limiter: waiting ${waitTime}ms before next request...`);[m
+[32m+[m[32m        await new Promise(resolve => setTimeout(resolve, waitTime));[m
+[32m+[m[32m      }[m
+[32m+[m
+[32m+[m[32m      const operation = this.queue.shift();[m
+[32m+[m[32m      if (operation) {[m
+[32m+[m[32m        this.lastRequestTime = Date.now();[m
+[32m+[m[32m        await operation();[m
+[32m+[m[32m      }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    this.isProcessing = false;[m
+[32m+[m[32m  }[m
+[32m+[m[32m}[m
+[32m+[m
+ interface AzureAnalysisResult {[m
+   status: string;[m
+   createdDateTime: string;[m
+[36m@@ -55,34 +112,41 @@[m [mexport class AzureDocumentIntelligenceService {[m
+ [m
+   // Try multiple Azure models with intelligent fallback and retry logic[m
+   async analyzeInvoice(file: File): Promise<InvoiceProcessingResult> {[m
+[31m-    const models = [[m
+[31m-      'prebuilt-invoice',      // Specialized invoice model (best for standard invoices)[m
+[31m-      'prebuilt-document',     // General document model (fallback for unusual layouts)[m
+[31m-      'prebuilt-layout'        // Layout model (last resort - extracts all text/tables)[m
+[31m-    ];[m
+[31m-[m
+[31m-    let lastError: Error | null = null;[m
+[31m-[m
+[31m-    for (const model of models) {[m
+[31m-      try {[m
+[31m-        console.log(`🔵 Trying Azure model: ${model}`);[m
+[31m-        return await this.analyzeWithRetry(file, model);[m
+[31m-      } catch (error) {[m
+[31m-        console.warn(`❌ Azure model ${model} failed:`, error);[m
+[31m-        lastError = error as Error;[m
+[31m-        [m
+[31m-        // If it's a rate limit error, wait and retry[m
+[31m-        if (error instanceof Error && error.message.includes('429')) {[m
+[31m-          console.log('⏳ Rate limit hit, waiting 5 seconds before trying next model...');[m
+[31m-          await new Promise(resolve => setTimeout(resolve, 5000));[m
+[32m+[m[32m    const rateLimiter = AzureRateLimiter.getInstance();[m
+[32m+[m[41m    [m
+[32m+[m[32m    return rateLimiter.execute(async () => {[m
+[32m+[m[32m      const models = [[m
+[32m+[m[32m        'prebuilt-invoice',      // Specialized invoice model (best for standard invoices)[m
+[32m+[m[32m        'prebuilt-document',     // General document model (fallback for unusual layouts)[m
+[32m+[m[32m        'prebuilt-layout'        // Layout model (last resort - extracts all text/tables)[m
+[32m+[m[32m      ];[m
+[32m+[m
+[32m+[m[32m      let lastError: Error | null = null;[m
+[32m+[m
+[32m+[m[32m      for (const model of models) {[m
+[32m+[m[32m        try {[m
+[32m+[m[32m          console.log(`🔵 Trying Azure model: ${model}`);[m
+[32m+[m[32m          return await this.analyzeWithRetry(file, model);[m
+[32m+[m[32m        } catch (error) {[m
+[32m+[m[32m          console.warn(`❌ Azure model ${model} failed:`, error);[m
+[32m+[m[32m          lastError = error as Error;[m
+[32m+[m[41m          [m
+[32m+[m[32m          // If it's a rate limit error, wait longer before trying next model[m
+[32m+[m[32m          if (error instanceof Error && error.message.includes('429')) {[m
+[32m+[m[32m            console.log('⏳ Rate limit hit, waiting 10 seconds before trying next model...');[m
+[32m+[m[32m            await new Promise(resolve => setTimeout(resolve, 10000));[m
+[32m+[m[32m          } else {[m
+[32m+[m[32m            // For other errors, wait briefly before trying next model[m
+[32m+[m[32m            await new Promise(resolve => setTimeout(resolve, 2000));[m
+[32m+[m[32m          }[m
+         }[m
+       }[m
+[31m-    }[m
+ [m
+[31m-    throw lastError || new Error('All Azure models failed');[m
+[32m+[m[32m      throw lastError || new Error('All Azure models failed');[m
+[32m+[m[32m    });[m
+   }[m
+ [m
+[31m-  private async analyzeWithRetry(file: File, model: string, maxRetries: number = 3): Promise<InvoiceProcessingResult> {[m
+[32m+[m[32m  private async analyzeWithRetry(file: File, model: string, maxRetries: number = 5): Promise<InvoiceProcessingResult> {[m
+     for (let attempt = 1; attempt <= maxRetries; attempt++) {[m
+       try {[m
+         console.log(`🔄 Azure ${model} attempt ${attempt}/${maxRetries}`);[m
+[36m@@ -94,15 +158,24 @@[m [mexport class AzureDocumentIntelligenceService {[m
+           throw error;[m
+         }[m
+         [m
+[31m-        // If it's a rate limit error, wait longer before retrying[m
+[32m+[m[32m        // Calculate wait time with exponential backoff and jitter[m
+[32m+[m[32m        let waitTime: number;[m
+[32m+[m[41m        [m
+         if (error instanceof Error && error.message.includes('429')) {[m
+[31m-          const waitTime = attempt * 2000; // 2s, 4s, 6s[m
+[31m-          console.log(`⏳ Rate limit hit, waiting ${waitTime}ms before retry...`);[m
+[31m-          await new Promise(resolve => setTimeout(resolve, waitTime));[m
+[32m+[m[32m          // For rate limit errors, use longer exponential backoff with jitter[m
+[32m+[m[32m          const baseDelay = Math.min(1000 * Math.pow(2, attempt - 1), 30000); // Cap at 30 seconds[m
+[32m+[m[32m          const jitter = Math.random() * 1000; // Add up to 1 second of jitter[m
+[32m+[m[32m          waitTime = baseDelay + jitter;[m
+[32m+[m[32m          console.log(`⏳ Rate limit hit, waiting ${Math.round(waitTime)}ms before retry...`);[m
+         } else {[m
+[31m-          // For other errors, wait briefly before retry[m
+[31m-          await new Promise(resolve => setTimeout(resolve, 1000));[m
+[32m+[m[32m          // For other errors, use shorter backoff[m
+[32m+[m[32m          const baseDelay = Math.min(500 * Math.pow(1.5, attempt - 1), 5000); // Cap at 5 seconds[m
+[32m+[m[32m          const jitter = Math.random() * 500; // Add up to 0.5 seconds of jitter[m
+[32m+[m[32m          waitTime = baseDelay + jitter;[m
+[32m+[m[32m          console.log(`⏳ Error occurred, waiting ${Math.round(waitTime)}ms before retry...`);[m
+         }[m
+[32m+[m[41m        [m
+[32m+[m[32m        await new Promise(resolve => setTimeout(resolve, waitTime));[m
+       }[m
+     }[m
+     [m
+[36m@@ -124,7 +197,8 @@[m [mexport class AzureDocumentIntelligenceService {[m
+       });[m
+ [m
+       if (!analyzeResponse.ok) {[m
+[31m-        throw new Error(`Azure Document Intelligence error: ${analyzeResponse.status}`);[m
+[32m+[m[32m        const errorText = await analyzeResponse.text().catch(() => 'Unknown error');[m
+[32m+[m[32m        throw new Error(`Azure Document Intelligence error: ${analyzeResponse.status} - ${errorText}`);[m
+       }[m
+ [m
+       // Get operation location from response headers[m
+[36m@@ -157,7 +231,8 @@[m [mexport class AzureDocumentIntelligenceService {[m
+       });[m
+ [m
+       if (!response.ok) {[m
+[31m-        throw new Error(`Polling error: ${response.status}`);[m
+[32m+[m[32m        const errorText = await response.text().catch(() => 'Unknown error');[m
+[32m+[m[32m        throw new Error(`Polling error: ${response.status} - ${errorText}`);[m
+       }[m
+ [m
+       const result: AzureAnalysisResult = await response.json();[m

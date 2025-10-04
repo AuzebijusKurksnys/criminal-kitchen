@@ -304,11 +304,11 @@ export class TextExtractor {
     // Try Foodlevel format first
     let dateMatch = text.match(/(\d{4})\.m\.\s*([^\s\d]+)\s*(\d{1,2})d\./i);
     if (dateMatch) {
-      const [, year, monthWord, dayRaw] = dateMatch;
-      const month = this.normalizeMonth(monthWord);
+    const [, year, monthWord, dayRaw] = dateMatch;
+    const month = this.normalizeMonth(monthWord);
       if (month) {
-        const day = dayRaw.padStart(2, '0');
-        return `${year}-${month}-${day}`;
+    const day = dayRaw.padStart(2, '0');
+    return `${year}-${month}-${day}`;
       }
     }
     
@@ -373,13 +373,13 @@ export class TextExtractor {
     
     // If we have multiple lines, use the old logic
     if (lines.length > 3) {
-      let currentRow: string[] = [];
+    let currentRow: string[] = [];
 
-      for (const rawLine of lines) {
-        const line = rawLine.trim();
-        if (!line) {
-          continue;
-        }
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line) {
+        continue;
+      }
 
         // Stop at various summary/total indicators
         if (/^Viso\s+be\s+PVM/i.test(line) || 
@@ -389,24 +389,24 @@ export class TextExtractor {
             /^Mokėtina\s+suma/i.test(line) ||
             /^Apvalinimas/i.test(line) ||
             /^Kasos\s+aparato/i.test(line)) {
-          if (currentRow.length) {
-            rows.push(currentRow.join(' '));
-          }
-          break;
+        if (currentRow.length) {
+          rows.push(currentRow.join(' '));
         }
-
-        if (/^\d+\s+/.test(line)) {
-          if (currentRow.length) {
-            rows.push(currentRow.join(' '));
-          }
-          currentRow = [line];
-        } else if (currentRow.length) {
-          currentRow.push(line);
-        }
+        break;
       }
 
-      if (currentRow.length) {
-        rows.push(currentRow.join(' '));
+      if (/^\d+\s+/.test(line)) {
+        if (currentRow.length) {
+          rows.push(currentRow.join(' '));
+        }
+        currentRow = [line];
+      } else if (currentRow.length) {
+        currentRow.push(line);
+      }
+    }
+
+    if (currentRow.length) {
+      rows.push(currentRow.join(' '));
       }
     } else {
       // Single line case (Lidl PDFs) - split on product row patterns
@@ -652,7 +652,7 @@ export class TextExtractor {
         const uniqueKey = `${parsed.productName}-${parsed.quantity}-${parsed.unitPrice}-${parsed.totalPrice}`;
         if (!seenProducts.has(uniqueKey)) {
           seenProducts.add(uniqueKey);
-          products.push(parsed);
+        products.push(parsed);
         } else {
           console.log('⚠️ Skipping duplicate product:', parsed.productName);
         }

@@ -4,7 +4,6 @@ import { SupplierPricesPage } from './pages/SupplierPricesPage';
 import { AllSupplierPricesPage } from './pages/AllSupplierPricesPage';
 import { InvoicesPage } from './pages/InvoicesPage';
 import { InvoiceUploadPage } from './pages/InvoiceUploadPage';
-import { InvoiceBatchUploadPage } from './pages/InvoiceBatchUploadPage';
 import { InvoiceReviewPage } from './pages/InvoiceReviewPage';
 import { InvoiceBatchReviewPage } from './pages/InvoiceBatchReviewPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -25,7 +24,6 @@ export function AppRoutes() {
       <Route path="/supplier-prices/all" element={<AllSupplierPricesPage />} />
       <Route path="/invoices" element={<InvoicesPage />} />
       <Route path="/invoices/upload" element={<InvoiceUploadPage />} />
-      <Route path="/invoices/batch-upload" element={<InvoiceBatchUploadPage />} />
       <Route path="/invoices/review" element={<InvoiceReviewPage />} />
       <Route path="/invoices/batch-review" element={<InvoiceBatchReviewPage />} />
       <Route path="/settings" element={<SettingsPage />} />

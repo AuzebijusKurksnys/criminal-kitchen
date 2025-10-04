@@ -54,7 +54,7 @@ export function InvoiceBatchReviewPage() {
 
   useEffect(() => {
     if (!batchResults || batchResults.length === 0) {
-      navigate('/invoices/batch-upload');
+      navigate('/invoices/upload');
       return;
     }
 
@@ -505,18 +505,45 @@ export function InvoiceBatchReviewPage() {
         {/* Supplier Selection */}
         <div className="bg-gray-800 rounded-lg p-6 mb-6 border border-gray-700">
           <label className="block text-sm font-medium text-gray-300 mb-3">Supplier</label>
-          <select
-            value={selectedSupplierId}
-            onChange={(e) => setSelectedSupplierId(e.target.value)}
-            className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">Select supplier...</option>
-            {suppliers.map(supplier => (
-              <option key={supplier.id} value={supplier.id}>
-                {supplier.name}
-              </option>
-            ))}
-          </select>
+          <div className="flex gap-3">
+            <select
+              value={selectedSupplierId}
+              onChange={(e) => setSelectedSupplierId(e.target.value)}
+              className="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Select supplier...</option>
+              {suppliers.map(supplier => (
+                <option key={supplier.id} value={supplier.id}>
+                  {supplier.name}
+                </option>
+              ))}
+            </select>
+            {batchResults && batchResults.length > 0 && batchResults[0].result.supplierInfo && !selectedSupplierId && (
+              <button
+                onClick={async () => {
+                  if (!batchResults[0].result.supplierInfo?.name) return;
+                  
+                  try {
+                    const newSupplier = await createSupplier({
+                      name: batchResults[0].result.supplierInfo.name,
+                      email: batchResults[0].result.supplierInfo.email || undefined,
+                      phone: batchResults[0].result.supplierInfo.phone || undefined
+                    });
+
+                    setSuppliers([...suppliers, newSupplier]);
+                    setSelectedSupplierId(newSupplier.id);
+                    showToast('success', `Created supplier: ${newSupplier.name}`);
+                  } catch (error) {
+                    console.error('Error creating supplier:', error);
+                    showToast('error', 'Failed to create supplier');
+                  }
+                }}
+                className="px-4 py-3 border border-green-500 text-green-400 rounded-lg text-sm hover:bg-green-900/20 bg-green-900/10 whitespace-nowrap"
+              >
+                Create "{cleanSupplierName(batchResults[0].result.supplierInfo.name)}"
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Products Table */}
@@ -601,7 +628,7 @@ export function InvoiceBatchReviewPage() {
         {/* Action Buttons */}
         <div className="flex justify-between items-center mt-8">
           <button
-            onClick={() => navigate('/invoices/batch-upload')}
+            onClick={() => navigate('/invoices/upload')}
             className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-600 transition-colors"
           >
             ← Back

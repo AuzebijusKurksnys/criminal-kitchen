@@ -1,84 +1,18 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileUpload, FilePreview } from '../components/FileUpload';
-import { showToast } from '../components/Toast';
-import { extractInvoiceData, isOpenAIInitialized } from '../services/invoiceParser';
-
+import { UnifiedInvoiceUpload } from '../components/UnifiedInvoiceUpload';
+import { isOpenAIInitialized } from '../services/invoiceParser';
 
 export function InvoiceUploadPage() {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
-
-  const handleFileSelect = (file: File) => {
-    setSelectedFile(file);
-  };
-
-  const handleRemoveFile = () => {
-    setSelectedFile(null);
-  };
-
-  const handleBatchUpload = () => {
-    navigate('/invoices/batch-upload');
-  };
-
-  const handleProcessInvoice = async () => {
-    if (!selectedFile) {
-      showToast('error', 'Please select a file first');
-      return;
-    }
-
-    if (!isOpenAIInitialized()) {
-      showToast('error', 'OpenAI API key not configured. Please check settings.');
-      navigate('/settings');
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      const result = await extractInvoiceData(selectedFile);
-      
-      // Navigate to review page with a cache-buster so stale state is never reused
-      navigate('/invoices/review', { 
-        state: { 
-          extractedData: result,
-          file: selectedFile,
-          cacheKey: Date.now() 
-        } 
-      });
-      
-      showToast('success', 'Invoice data extracted successfully');
-    } catch (error) {
-      console.error('Error processing invoice:', error);
-      showToast('error', error instanceof Error ? error.message : 'Failed to process invoice');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-100">Upload Invoice</h1>
         <p className="mt-2 text-gray-600">
-          Upload your supplier invoice to automatically extract product information and update inventory.
+          Upload one or more supplier invoices to automatically extract product information and update inventory.
+          The system will automatically handle single or batch processing based on the number of files selected.
         </p>
-        
-        {/* Upload Mode Selector */}
-        <div className="mt-6 flex justify-center">
-          <div className="bg-gray-900 rounded-lg p-1 border border-gray-800 inline-flex">
-            <button className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md">
-              Single Invoice
-            </button>
-            <button 
-              onClick={handleBatchUpload}
-              className="px-4 py-2 text-sm font-medium text-gray-200 hover:text-gray-100 hover:bg-gray-800 rounded-md"
-            >
-              Batch Upload
-            </button>
-          </div>
-        </div>
       </div>
 
       {!isOpenAIInitialized() && (
@@ -107,66 +41,7 @@ export function InvoiceUploadPage() {
         </div>
       )}
 
-      <div className="bg-gray-900 shadow-sm rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-800">
-          <h2 className="text-lg font-medium text-gray-100">
-            Step 1: Select Invoice File
-          </h2>
-          <p className="mt-1 text-sm text-gray-400">
-            Upload an image or PDF of your invoice (JPG, PNG, GIF, WebP, or PDF format)
-          </p>
-        </div>
-
-        <div className="p-6">
-          {!selectedFile ? (
-            <FileUpload
-              onFileSelect={handleFileSelect}
-              accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
-              maxSize={10 * 1024 * 1024} // 10MB
-            />
-          ) : (
-            <div className="space-y-4">
-              <FilePreview
-                file={selectedFile}
-                onRemove={handleRemoveFile}
-              />
-              
-              <div className="flex justify-between items-center">
-                <button
-                  onClick={handleRemoveFile}
-                  className="text-sm text-gray-400 hover:text-gray-200"
-                >
-                  Choose different file
-                </button>
-                
-                <div className="flex space-x-3">
-                  <button
-                    onClick={() => navigate('/invoices')}
-                    className="px-4 py-2 border border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-200 bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    Cancel
-                  </button>
-                  
-                  <button
-                    onClick={handleProcessInvoice}
-                    disabled={isProcessing || !isOpenAIInitialized()}
-                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isProcessing ? (
-                      <>
-                        <span className="animate-spin inline-block mr-2">⟳</span>
-                        Processing...
-                      </>
-                    ) : (
-                      'Process Invoice'
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      <UnifiedInvoiceUpload />
 
       {/* Instructions */}
       <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
@@ -186,13 +61,13 @@ export function InvoiceUploadPage() {
           </div>
           
           <div>
-            <h4 className="font-medium mb-2">2. Smart Matching</h4>
+            <h4 className="font-medium mb-2">2. Smart Processing</h4>
             <p>System automatically:</p>
             <ul className="list-disc list-inside mt-1 space-y-1">
-              <li>Matches products to your inventory</li>
-              <li>Suggests new products to create</li>
-              <li>Updates supplier prices</li>
-              <li>Calculates inventory changes</li>
+              <li>Processes files sequentially to avoid rate limits</li>
+              <li>Routes to single or batch review based on file count</li>
+              <li>Groups similar products across multiple invoices</li>
+              <li>Provides supplier creation options when needed</li>
             </ul>
           </div>
         </div>
@@ -201,6 +76,7 @@ export function InvoiceUploadPage() {
           <p className="text-sm text-blue-800">
             <strong>Tip:</strong> For best results, ensure your invoice is clearly visible and well-lit if taking a photo.
             PDF files are automatically converted to images for processing. The system works with both Lithuanian and English invoices.
+            Multiple files are processed sequentially to prevent API rate limiting.
           </p>
         </div>
       </div>

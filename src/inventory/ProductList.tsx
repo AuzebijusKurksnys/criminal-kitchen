@@ -420,16 +420,16 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <div className="text-sm text-gray-400">
-              {(searchQuery || unitFilter || categoryFilter || stockLevelFilter) ? (
-                <>Showing {filteredProducts.length} of {products.length} products</>
-              ) : (
-                <>{products.length} products total</>
-              )}
-              {selectedProducts.size > 0 && (
-                <span className="ml-2 text-blue-400 font-medium">
-                  ({selectedProducts.size} selected)
-                </span>
-              )}
+            {(searchQuery || unitFilter || categoryFilter || stockLevelFilter) ? (
+              <>Showing {filteredProducts.length} of {products.length} products</>
+            ) : (
+              <>{products.length} products total</>
+            )}
+            {selectedProducts.size > 0 && (
+              <span className="ml-2 text-blue-400 font-medium">
+                ({selectedProducts.size} selected)
+              </span>
+            )}
             </div>
           </div>
           
@@ -508,10 +508,10 @@ export function ProductList({ products, onEdit, onDelete, loading = false }: Pro
                 
                 {expandedSuppliers.has('unassigned') && (
                   <div className="border-t border-gray-800">
-                    <Table
+        <Table
                       data={productsBySupplier.unassigned}
-                      columns={columns}
-                      keyExtractor={(product) => product.id}
+          columns={columns}
+          keyExtractor={(product) => product.id}
                       emptyMessage="No products"
                     />
                   </div>
